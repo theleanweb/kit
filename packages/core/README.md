@@ -2,16 +2,17 @@
 
 Toolkit for a lean web
 
+> Build websites/apps with modern DX (bundling, minifying etc) without sacrificing the user experience. Use only what you need, no unnecessary JavaScript sent to the client
+
 ## Features
 
 - Hot Module Reload
-- Use Svelte for templating with familiar express like router
-- Scoped css, build your apps with reusable components
-- Markdown support, MDX but for svelte ([link](https://mdsvex.com/))
+- Templating with Svelte
+- Scoped CSS
+- Markdown and MDX support
+- Build your apps with reusable components
 - Typed templates with typescript out of the box
 - Deploy anywhere, with adapters for different platforms. Currently supported Vercel and Node
-- Build websites/apps with modern DX (bundling, minifying etc) without sacrificing the user experience
-- Use only what you need, no unnecessary JavaScript sent to the client
 - Modern SPA features by using Turbolinks, HTMX etc
 
 ## Examples
