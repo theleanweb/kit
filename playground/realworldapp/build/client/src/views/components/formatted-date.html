@@ -1,0 +1,11 @@
+<script>
+  export let date;
+
+  const formattedDate = new Intl.DateTimeFormat("en-US", {
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+  }).format(new Date(date));
+</script>
+
+<span class="date">{formattedDate}</span>

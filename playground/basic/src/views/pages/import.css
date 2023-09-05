@@ -1,0 +1,7 @@
+.p {
+  color: theme(colors.red.500);
+}
+
+body {
+  background-color: red;
+}

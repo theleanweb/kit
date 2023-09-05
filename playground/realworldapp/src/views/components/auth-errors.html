@@ -1,0 +1,14 @@
+<script>
+  export let errors;
+</script>
+
+<ul class="error-messages">
+  {#each Object.entries(errors) as [field, fieldErrors]}
+    {#each fieldErrors as fieldError}
+      <li>
+        {field}
+        {fieldError}
+      </li>
+    {/each}
+  {/each}
+</ul>

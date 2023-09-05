@@ -1,0 +1,9 @@
+body {
+  background-color: rebeccapurple;
+}
+
+div {
+  & p {
+    background-color: black;
+  }
+}

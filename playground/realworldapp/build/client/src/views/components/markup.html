@@ -1,0 +1,14 @@
+<script>
+  import { marked } from "marked";
+
+  export let content;
+
+  const markup = marked(content, {
+    gfm: true,
+    breaks: true,
+    mangle: false,
+    headerIds: false,
+  });
+</script>
+
+<div>{@html markup}</div>

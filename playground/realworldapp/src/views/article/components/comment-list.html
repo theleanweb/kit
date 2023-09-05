@@ -1,0 +1,76 @@
+<script>
+  export let comments;
+  export let user;
+</script>
+
+{#if !user}
+  <div class="row">
+    <div class="col-xs-12 col-md-8 offset-md-2">
+      <p>
+        <a href="/login">Sign in</a>
+        &nbsp; or &nbsp;
+        <a href="/register">Sign up</a>
+        &nbsp; to add comments on this article.
+      </p>
+    </div>
+  </div>
+{:else}
+  <div class="row">
+    <div class="col-xs-12 col-md-8 offset-md-2">
+      <form class="card comment-form">
+        <div class="card-block">
+          <textarea
+            name="comment"
+            class="form-control"
+            placeholder="Write a comment..."
+            rows={3}
+          ></textarea>
+        </div>
+        <div class="card-footer">
+          <img
+            src={user.image}
+            class="comment-author-img"
+            alt="{user.username} avatar"
+          />
+          <button type="submit" class="btn btn-sm btn-primary">
+            Post Comment
+          </button>
+        </div>
+      </form>
+
+      {#if comments}
+        {#each comments as comment}
+          <div class="card">
+            <div class="card-block">
+              <p class="card-text">{comment.body}</p>
+            </div>
+            <div class="card-footer">
+              <a
+                href="/profile/{comment.author.username}"
+                class="comment-author"
+              >
+                <img
+                  src={comment.author.image}
+                  class="comment-author-img"
+                  alt="{comment.author.username} avatar"
+                />
+              </a>
+              &nbsp;
+              <a
+                href="/profile/{comment.author.username}"
+                class="comment-author"
+              >
+                {comment.author.username}
+              </a>
+
+              <span class="date-posted">{comment.createdAt}</span>
+              <span class="mod-options">
+                <i class="ion-trash-a" />
+              </span>
+            </div>
+          </div>
+        {/each}
+      {/if}
+    </div>
+  </div>
+{/if}

@@ -1,0 +1,24 @@
+<script>
+	export let isExtended;
+	export let article;
+
+	const count = article.favoritesCount;
+	const favorited = article.favorited;
+</script>
+
+{#if isExtended}
+	<button class="btn btn-sm btn-{!favorited ? 'outline-' : ''}primary">
+		<i class="ion-heart" />
+		{favorited ? "Unfavorite" : "Favorite"} Article
+		<span class="counter">({count})</span>
+	</button>
+{:else}
+	<button
+		class="btn btn-sm btn-{!favorited
+			? 'outline-'
+			: ''}primary pull-xs-right"
+	>
+		<i class="ion-heart" />
+		{count}
+	</button>
+{/if}

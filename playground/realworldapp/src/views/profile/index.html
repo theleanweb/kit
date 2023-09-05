@@ -1,0 +1,99 @@
+<script>
+  import Layout from "../components/layout.html";
+  import Header from "../components/header.html";
+  import Pagination from "../components/pagination.html";
+  import ArticlePreview from "../components/article-preview.html";
+
+  export let profile;
+  export let user;
+  export let activeTab;
+  export let articles;
+  export let articlesCount;
+
+  const ProfileTab = {
+    MyArticles: "my-articles",
+    FavoritedArticles: "favorited-articles",
+  };
+
+  const isAuthor = user && profile && user.username === profile.username;
+</script>
+
+<Layout>
+  <Header />
+
+  <div class="profile-page">
+    <div class="user-info">
+      <div class="container">
+        <div class="row">
+          <div class="col-xs-12 col-md-10 offset-md-1">
+            <img src={profile.image} class="user-img" alt="profile avatar" />
+            <h4>{profile.username}</h4>
+            <p>{profile.bio}</p>
+
+            {#if isAuthor}
+              <a
+                href="/settings"
+                class="btn btn-sm btn-outline-secondary action-btn"
+              >
+                <i class="ion-gear-a" /> Edit Profile Settings
+              </a>
+            {/if}
+
+            {#if !isAuthor}
+              <!-- <FollowButton
+                username={profile.username}
+                following={profile.following}
+              /> -->
+            {/if}
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="container">
+      <div class="row">
+        <div class="col-xs-12 col-md-10 offset-md-1">
+          <div class="articles-toggle">
+            <ul class="nav nav-pills outline-active">
+              <li class="nav-item">
+                <a
+                  class="nav-link {activeTab === ProfileTab.MyArticles
+                    ? 'active'
+                    : ''}"
+                  href="/profile?tab={ProfileTab.MyArticles}"
+                >
+                  My Articles
+                </a>
+              </li>
+
+              <li class="nav-item">
+                <a
+                  class="nav-link {activeTab === ProfileTab.FavoritedArticles
+                    ? 'active'
+                    : ''}"
+                  href="/profile?tab={ProfileTab.FavoritedArticles}"
+                >
+                  Favorited Articles
+                </a>
+              </li>
+            </ul>
+          </div>
+
+          {#if articles}
+            {#if articles.length === 0}
+              <div>No articles are here... yet.</div>
+            {:else}
+              {#each articles as article}
+                <ArticlePreview {article} />
+              {/each}
+            {/if}
+
+            {#if articlesCount > 10}
+              <Pagination count={articles.articlesCount} limit={10} />
+            {/if}
+          {/if}
+        </div>
+      </div>
+    </div>
+  </div>
+</Layout>

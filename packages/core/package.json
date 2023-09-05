@@ -1,0 +1,84 @@
+{
+  "name": "leanweb-kit",
+  "version": "1.0.3",
+  "description": "Tools for building better web sites/applications",
+  "type": "module",
+  "homepage": "https://github.com/joshamaju/hono-mvc",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/joshamaju/hono-mvc",
+    "directory": "packages/core"
+  },
+  "scripts": {
+    "dev": "tsc --w",
+    "build": "tsc",
+    "prepublish": "rimraf dist && pnpm build"
+  },
+  "keywords": [
+    "ssr",
+    "server",
+    "node",
+    "html"
+  ],
+  "author": "Joshua Amaju",
+  "license": "ISC",
+  "devDependencies": {
+    "@types/connect": "^3.4.35",
+    "@types/mime": "^3.0.1",
+    "@types/node": "^20.4.2",
+    "@types/set-cookie-parser": "^2.4.3",
+    "connect": "^3.7.0",
+    "rimraf": "^5.0.0",
+    "rollup": "^3.26.3",
+    "typescript": "^5.1.6",
+    "vite": "^4.4.4"
+  },
+  "files": [
+    "dist",
+    "index.d.ts",
+    "html.d.ts"
+  ],
+  "dependencies": {
+    "@effect/data": "^0.15.1",
+    "@effect/io": "^0.33.0",
+    "cheerio": "1.0.0-rc.12",
+    "dom-serializer": "^2.0.0",
+    "domhandler": "^5.0.3",
+    "glob": "^10.3.3",
+    "hono": "^3.3.1",
+    "htmlparser2": "^9.0.0",
+    "kleur": "^4.1.5",
+    "magic-string": "^0.30.3",
+    "mdsvex": "^0.11.0",
+    "mime": "^3.0.0",
+    "set-cookie-parser": "^2.6.0",
+    "sirv": "^2.0.3",
+    "strip-ansi": "^7.1.0",
+    "svelte": "^4.0.5",
+    "svelte-preprocess": "^5.0.4",
+    "ts-dedent": "^2.2.0",
+    "undici": "^5.22.1",
+    "zod": "^3.21.4"
+  },
+  "exports": {
+    ".": {
+      "types": "./index.d.ts"
+    },
+    "./vite": {
+      "import": "./dist/vite/plugin.js",
+      "types": "./dist/vite/plugin.d.ts"
+    },
+    "./node/polyfills": {
+      "import": "./dist/node/polyfills.js",
+      "types": "./dist/node/polyfills.d.ts"
+    },
+    "./runtime": {
+      "import": "./dist/runtime/index.js",
+      "types": "./dist/runtime/index.d.ts"
+    }
+  },
+  "peerDependencies": {
+    "typescript": "^5.1.6",
+    "vite": "^4.4.4"
+  }
+}

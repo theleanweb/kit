@@ -1,0 +1,19 @@
+<script>
+  export let count;
+  export let limit;
+  export let active;
+
+  const pages = Array.from(Array(Math.ceil(count / limit)).keys()).map(i => i + 1);
+</script>
+
+<nav>
+  <ul class="pagination">
+    {#each pages as page}
+      <li class="page-item {active === page ? 'active' : ''}">
+        <a class="page-link" href="">
+          {page}
+        </a>
+      </li>
+    {/each}
+  </ul>
+</nav>

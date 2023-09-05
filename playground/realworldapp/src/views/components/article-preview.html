@@ -1,0 +1,32 @@
+<script>
+  import TagList from "./tag-list.html";
+  import FormattedDate from "./formatted-date.html";
+  import FavoriteButton from './favorite-button.html'
+
+  export let article;
+</script>
+
+<div class="article-preview">
+  <div class="article-meta">
+    <a href="/profile/{article.author.username}">
+      <img decoding="sync" src="{article.author.image}" alt="author avatar" />
+    </a>
+
+    <div class="info">
+      <a href="/profile/{article.author.username}" class="author">
+        {article.author.username}
+      </a>
+
+      <FormattedDate date="{article.createdAt}" />
+    </div>
+
+    <FavoriteButton {article} />
+  </div>
+
+  <a href="/articles/{article.slug}" class="preview-link">
+    <h1>{article.title}</h1>
+    <p>{article.description}</p>
+    <span>Read more...</span>
+    <TagList tags="{article.tagList}" />
+  </a>
+</div>

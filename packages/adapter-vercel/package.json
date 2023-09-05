@@ -1,0 +1,39 @@
+{
+  "name": "adapter-vercel",
+  "version": "0.0.1",
+  "description": "",
+  "license": "MIT",
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./index.d.ts",
+      "import": "./index.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "types": "index.d.ts",
+  "files": [
+    "files",
+    "index.js",
+    "index.d.ts"
+  ],
+  "scripts": {
+    "check": "tsc",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@hono/node-server": "^1.1.0",
+    "@vercel/nft": "^0.22.6",
+    "esbuild": "^0.17.18",
+    "hono": "^3.3.1"
+  },
+  "devDependencies": {
+    "@types/node": "^16.18.6",
+    "leanweb-kit": "workspace:^",
+    "typescript": "^4.9.4",
+    "vitest": "^0.32.2"
+  },
+  "peerDependencies": {
+    "leanweb-kit": "workspace:^"
+  }
+}

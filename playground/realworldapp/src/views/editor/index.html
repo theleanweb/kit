@@ -1,0 +1,76 @@
+<script>
+  import Layout from "../components/layout.html";
+  import Header from "../components/header.html";
+
+  export let article;
+  export let user;
+</script>
+
+<Layout>
+  <Header {user} />
+
+  <div class="editor-page">
+    <div class="container page">
+      <div class="row">
+        <div class="col-md-10 offset-md-1 col-xs-12">
+          <form>
+            <fieldset>
+              <fieldset class="form-group">
+                <input
+                  type="text"
+                  value={article.title}
+                  name="articleTitle"
+                  placeholder="Article Title"
+                  class="form-control form-control-lg"
+                />
+              </fieldset>
+
+              <fieldset class="form-group">
+                <input
+                  type="text"
+                  name="description"
+                  value={article.description}
+                  class="form-control"
+                  placeholder="What's this article about?"
+                />
+              </fieldset>
+
+              <fieldset class="form-group">
+                <textarea
+                  rows="8"
+                  class="form-control"
+                  name="body"
+                  value={article.body}
+                  placeholder="Write your article (in markdown)"
+                ></textarea>
+              </fieldset>
+              <fieldset class="form-group">
+                <input
+                  type="text"
+                  name="tags"
+                  class="form-control"
+                  placeholder="Enter tags"
+                />
+
+                <div class="tag-list">
+                  {#each article.tagList as tag}
+                    <span class="tag-default tag-pill" key={tag}>
+                      <i class="ion-close-round" />
+                      {tag}
+                    </span>
+                  {/each}
+                </div>
+              </fieldset>
+              <button
+                type="button"
+                class="btn btn-lg pull-xs-right btn-primary"
+              >
+                Publish Article
+              </button>
+            </fieldset>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+</Layout>

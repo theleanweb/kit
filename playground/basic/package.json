@@ -1,0 +1,34 @@
+{
+  "name": "basic",
+  "version": "1.0.0",
+  "description": "",
+  "type": "module",
+  "scripts": {
+    "dev": "DEV=true vite dev",
+    "prod": "vite build",
+    "start": "ts-node --esm server.ts"
+  },
+  "keywords": [],
+  "author": "Joshua Amaju",
+  "license": "ISC",
+  "devDependencies": {
+    "@types/node": "^20.4.2",
+    "adapter-node": "workspace:*",
+    "adapter-vercel": "workspace:*",
+    "autoprefixer": "^10.4.14",
+    "leanweb-kit": "workspace:*",
+    "postcss": "^8.4.27",
+    "sass": "^1.63.6",
+    "tailwindcss": "^3.3.3",
+    "ts-node": "^10.9.1",
+    "typescript": "^5.1.6",
+    "vite": "^4.4.4"
+  },
+  "dependencies": {
+    "@barba/core": "^2.9.7",
+    "@hono/node-server": "^1.1.0",
+    "hono": "^3.3.1",
+    "svelte": "^4.0.5",
+    "zod": "^3.21.4"
+  }
+}

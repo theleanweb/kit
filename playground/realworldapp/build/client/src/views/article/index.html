@@ -1,0 +1,56 @@
+<script>
+    import FormattedDate from '../components/formatted-date.html'
+    import TagList from '../components/tag-list.html'
+    import Markup from '../components/markup.html'
+
+    export let article;
+</script>
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="//demo.productionready.io/main.css" />
+    <title>Document</title>
+</head>
+<body>
+    <div class="article-page">
+      <div class="banner">
+        <div class="container">
+          <h1>{article.title}</h1>
+
+          <div class="article-meta">
+            <a href='/profile/{article.author.username}'>
+              <img src={article.author.image} alt="author avatar" />
+            </a>
+
+            <div class="info">
+              <a href='/profile/{article.author.username}' class="author">
+                {article.author.username}
+              </a>
+
+              <FormattedDate date={article.createdAt} />
+            </div>
+
+            <!-- <ArticleActions article={article} /> -->
+          </div>
+        </div>
+      </div>
+
+      <div class="container page">
+        <div class="row article-content">
+          <div class="col-xs-12">
+            <p>{article.description}</p>
+            <Markup content={article.body} />
+            <TagList tags={article.tagList} />
+          </div>
+        </div>
+
+        <hr />
+
+        <!-- <CommentList slug={slug} /> -->
+      </div>
+    </div>
+</body>
+</html>

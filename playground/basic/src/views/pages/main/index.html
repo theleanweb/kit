@@ -1,0 +1,62 @@
+<script data-svelte>
+  import {dependencies} from "../../../../package.json";
+  import zod from 'zod'
+  const deps = Object.keys(dependencies);
+</script>
+
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>BarbaJS legacy example</title>
+    <link rel="stylesheet" href="../global.css">
+  </head>
+  <body>
+    <!-- define the wrapper and the container -->
+    <div data-router-wrapper>
+      <div data-router-view="page-a">
+        <h1>Home</h1>
+
+        <ul class='bg-red-400'>
+          {#each deps as item}
+            <li>{item}</li>
+          {/each}
+        </ul>
+
+        <a href="/about" class='p'>Go to about</a>
+      </div>
+    </div>
+
+    <script type="module" src="./script.ts"></script>
+
+    <!-- load barba (UMD version) -->
+    <!-- load barba (UMD version) -->
+    <!-- <script src="https://unpkg.com/@barba/core"></script> -->
+
+    <!-- load gsap animation library (minified version) -->
+    <!-- load gsap animation library (minified version) -->
+    <!-- <script src="https://unpkg.com/gsap@latest/dist/gsap.min.js"></script> -->
+
+    <!-- init barba with a simple opacity transition -->
+    <!-- init barba with a simple opacity transition -->
+    <!-- <script type="text/javascript">
+      barba.init({
+        transitions: [
+          {
+            name: "opacity-transition",
+            leave(data) {
+              return gsap.to(data.current.container, {
+                opacity: 0,
+              });
+            },
+            enter(data) {
+              return gsap.from(data.next.container, {
+                opacity: 0,
+              });
+            },
+          },
+        ],
+      });
+    </script> -->
+  </body>
+</html>
