@@ -3,10 +3,10 @@
   "version": "1.0.3",
   "description": "Tools for building better web sites/applications",
   "type": "module",
-  "homepage": "https://github.com/joshamaju/hono-mvc",
+  "homepage": "https://github.com/theleanweb/kit",
   "repository": {
     "type": "git",
-    "url": "https://github.com/joshamaju/hono-mvc",
+    "url": "https://github.com/theleanweb/kit",
     "directory": "packages/core"
   },
   "scripts": {
