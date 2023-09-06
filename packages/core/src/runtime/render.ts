@@ -118,7 +118,11 @@ class RenderError {
 //   return html;
 // }
 
-export async function render(view: string, props: object = {}) {
+export async function render(
+  view: string,
+  props: object = {},
+  init?: ResponseInit | undefined
+) {
   const program = Effect.gen(function* ($) {
     const entries = [
       view,
@@ -172,6 +176,7 @@ export async function render(view: string, props: object = {}) {
 
     return new Response(document.html(), {
       headers: { "Content-Type": "text/html" },
+      ...init,
     });
   }).pipe(
     Effect.catchTag("NoSuchElementException", () => {
