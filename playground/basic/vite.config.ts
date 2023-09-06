@@ -1,13 +1,15 @@
 import { defineConfig } from "vite";
-import { hono } from "core/vite";
+import { leanweb } from "leanweb-kit/vite";
 import adapter from "adapter-node";
 import path from "node:path";
 
 export default defineConfig({
   plugins: [
-    hono({
+    leanweb({
       adapter: adapter(),
-      views: "src/views/pages",
+      files: {
+        views: "src/views/pages",
+      },
     }),
   ],
   resolve: {
