@@ -449,8 +449,6 @@ export async function leanweb(user_config?: Config) {
             })
           );
 
-          // console.log("\npreprocessed", preprocessed);
-
           const component = yield* $(
             Effect.try({
               try: () =>
