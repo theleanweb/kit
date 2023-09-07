@@ -23,10 +23,6 @@ import { login, register, updateUser } from "./core/services/auth.js";
 import { getPopularTags } from "./core/services/tag.js";
 import { Tab } from "./views/types/tab.js";
 
-// import MD, { metadata } from "./views/markdown/index.md.html";
-
-// console.log(metadata);
-
 type Variables = {
   user: User | null;
 };
