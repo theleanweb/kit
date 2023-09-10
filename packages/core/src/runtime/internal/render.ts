@@ -7,8 +7,8 @@ import * as Effect from "@effect/io/Effect";
 import { options } from "__GENERATED__/config.js";
 import { views } from "__GENERATED__/views.js";
 
-import { VITE_HTML_CLIENT } from "../utils/constants.js";
-import { CompileError, coalesce_to_error } from "../utils/error.js";
+import { VITE_HTML_CLIENT } from "../../utils/constants.js";
+import { CompileError, coalesce_to_error } from "../../utils/error.js";
 import { prepareError, template } from "./error.js";
 
 class RenderError {

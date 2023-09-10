@@ -1,15 +1,21 @@
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
+import {
+  Server as HttpServer,
+  IncomingMessage,
+  ServerResponse,
+} from "node:http";
+
 import sirv from "sirv";
+import { Server } from "connect";
 import { ResolvedConfig } from "vite";
 
-import { Server } from "connect";
-import { Hono } from "hono";
-import { Server as HttpServer, IncomingMessage, ServerResponse } from "http";
+import { createMiddleware } from "@hattip/adapter-node";
+import { Router } from "@hattip/router";
+
 import { ValidatedConfig } from "../../config/schema.js";
-import { should_polyfill } from "../../utils/platform.js";
-import { getRequest, setResponse } from "../../node/index.js";
 import { installPolyfills } from "../../node/polyfills.js";
+import { should_polyfill } from "../../utils/platform.js";
 
 type Handler = (
   req: IncomingMessage,
@@ -26,13 +32,11 @@ export async function preview(
     installPolyfills();
   }
 
-  const protocol = vite_config.preview.https ? "https" : "http";
-
   const dir = join(config.outDir, "output/server");
 
   const module = await import(pathToFileURL(join(dir, "index.js")).href);
 
-  const server = module.default as Hono;
+  const router = module.default as Router;
 
   return () => {
     // generated client assets and the contents of `static`
@@ -53,36 +57,9 @@ export async function preview(
       )
     );
 
-    // vite.middlewares.use((req, res, next) => {
-    // 	const original_url = req.url as string;
-    // 	const { pathname } = new URL(original_url, "http://dummy");
-
-    // 	if (pathname.startsWith(base)) {
-    // 		next();
-    // 	} else {
-    // 		res.statusCode = 404;
-    // 		not_found(req, res, base);
-    // 	}
-    // });
-
     // SSR
-    vite.middlewares.use(async (req, res) => {
-      const host = req.headers["host"];
-
-      let request;
-
-      try {
-        request = await getRequest({
-          base: `${protocol}://${host}`,
-          request: req,
-        });
-      } catch (err: any) {
-        res.statusCode = err.status || 400;
-        return res.end("Invalid request body");
-      }
-
-      setResponse(res, await server.fetch(request));
-    });
+    const middleware = createMiddleware(router.buildHandler());
+    vite.middlewares.use(middleware);
   };
 }
 

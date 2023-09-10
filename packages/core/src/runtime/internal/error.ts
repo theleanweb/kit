@@ -1,6 +1,6 @@
 import { RollupError } from "rollup";
 import strip from "strip-ansi";
-import { VITE_HTML_CLIENT } from "../utils/constants.js";
+import { VITE_HTML_CLIENT } from "../../utils/constants.js";
 
 export interface ErrorPayload {
   type: "error";
