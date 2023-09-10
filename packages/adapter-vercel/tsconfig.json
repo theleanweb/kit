@@ -6,7 +6,7 @@
     "noEmit": true,
     "noImplicitAny": true,
     "module": "es2022",
-    "moduleResolution": "node",
+    "moduleResolution": "nodenext",
     "target": "es2022",
     "allowSyntheticDefaultImports": true,
     "baseUrl": "."

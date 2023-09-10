@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "DEV=true vite dev",
     "prod": "vite build",
+    "preview": "vite preview",
     "start": "ts-node --esm server.ts"
   },
   "keywords": [],
@@ -25,6 +26,8 @@
   },
   "dependencies": {
     "@barba/core": "^2.9.7",
+    "@hattip/cookie": "^0.0.34",
+    "@hattip/session": "^0.0.34",
     "@hono/node-server": "^1.1.0",
     "hono": "^3.3.1",
     "svelte": "^4.0.5",

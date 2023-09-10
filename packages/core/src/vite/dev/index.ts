@@ -1,28 +1,28 @@
-import type { ResolvedConfig, ViteDevServer } from "vite";
-import { buildErrorMessage } from "vite";
-import { ValidatedConfig } from "../../config/schema.js";
-
-import color from "kleur";
 import * as fs from "node:fs";
 import * as path from "node:path";
 import { URL } from "node:url";
-import sirv from "sirv";
 
+import type { ResolvedConfig, ViteDevServer } from "vite";
+import { buildErrorMessage } from "vite";
+
+import color from "kleur";
+
+import sirv from "sirv";
 import { Server } from "connect";
 import mime from "mime";
 
-import { Hono } from "hono";
+import { createMiddleware } from "@hattip/adapter-node";
+import { Router } from "@hattip/router";
 
 import * as O from "@effect/data/Option";
 import * as Effect from "@effect/io/Effect";
 
+import { ValidatedConfig } from "../../config/schema.js";
+import { installPolyfills } from "../../node/polyfills.js";
 import * as sync from "../../sync/index.js";
 import { to_fs } from "../../utils/filesystem.js";
 import { should_polyfill } from "../../utils/platform.js";
 import { resolveEntry } from "../../utils/utils.js";
-import { getRequest, setResponse } from "../../node/index.js";
-import { installPolyfills } from "../../node/polyfills.js";
-
 import { coalesce_to_error } from "../../utils/error.js";
 
 const script_file_regex = /\.(js|ts)$/;
@@ -193,7 +193,7 @@ export async function dev(
     // serving routes with those names. See https://github.com/vitejs/vite/issues/7363
     remove_static_middlewares(vite.middlewares);
 
-    vite.middlewares.use(async (req, res) => {
+    vite.middlewares.use(async (req, res, next) => {
       // Vite's base middleware strips out the base path. Restore it
       const original_url = req.url;
 
@@ -274,27 +274,11 @@ export async function dev(
 
         const module = await vite.ssrLoadModule(config.files.entry);
 
-        const server = module.default as Hono;
+        const router = module.default as Router;
 
-        let request;
+        const middleware = createMiddleware(router.buildHandler());
 
-        try {
-          request = await getRequest({ base, request: req });
-        } catch (err: any) {
-          res.statusCode = err.status || 400;
-          return res.end("Invalid request body");
-        }
-
-        const rendered = await server.fetch(request);
-
-        if (rendered.status === 404) {
-          // @ts-expect-error
-          serve_static_middleware.handle(req, res, () => {
-            setResponse(res, rendered);
-          });
-        } else {
-          setResponse(res, rendered);
-        }
+        middleware(req, res, next);
       } catch (e) {
         const error = coalesce_to_error(e);
         res.statusCode = 500;

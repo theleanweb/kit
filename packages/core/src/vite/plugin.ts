@@ -161,7 +161,9 @@ export async function leanweb(user_config?: Config) {
         root: cwd,
         publicDir: config.files.assets,
         base: !ssr ? assets_base(config) : "./",
-        ssr: { noExternal: ["hono", "svelte", "esm-env", "leanweb-kit"] },
+        ssr: {
+          noExternal: ["svelte", "esm-env", "leanweb-kit"],
+        },
         define: {
           __LEANWEB_DEV__: !is_build ? "true" : "false",
           __LEANWEB_ADAPTER_NAME__: s(config.adapter?.name),

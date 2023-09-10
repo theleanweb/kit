@@ -1,8 +1,8 @@
 import { installPolyfills } from "leanweb-kit/node/polyfills";
-import { handle } from "@hono/node-server/vercel";
+import { createMiddleware } from "@hattip/adapter-node";
 
-import Server from "SERVER";
+import Router from "SERVER";
 
 installPolyfills();
 
-export default handle(Server);
+export default createMiddleware(Router.buildHandler(), { trustProxy: true });

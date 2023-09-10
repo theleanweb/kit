@@ -29,12 +29,12 @@
     "vitest": "^0.32.2"
   },
   "dependencies": {
-    "@hono/node-server": "^1.1.0",
+    "@hattip/adapter-node": "^0.0.34",
+    "@hattip/router": "^0.0.34",
     "@rollup/plugin-commonjs": "^25.0.0",
     "@rollup/plugin-json": "^6.0.0",
     "@rollup/plugin-node-resolve": "^15.0.1",
     "leanweb-kit": "workspace:^",
-    "hono": "^3.3.1",
     "rollup": "^3.7.0"
   }
 }

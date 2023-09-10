@@ -1,4 +1,4 @@
-import Server from "SERVER";
-import { handle } from "@hono/node-server/vercel";
+import Router from "SERVER";
+import adapt from "@hattip/adapter-vercel-edge";
 
-export default handle(Server);
+export default adapt(Router.buildHandler());
