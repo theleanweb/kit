@@ -101,9 +101,9 @@ touch home.html
 > entry.ts
 
 ```js
-import {Router} from 'leanweb-kit/runtime';
+import {createRouter} from 'leanweb-kit/runtime';
 
-const app = new Router();
+const app = createRouter();
 
 export default app
 ```
@@ -146,7 +146,7 @@ npm run preview
 ```ts
 import {render} from 'leanweb-kit/runtime'
 
-const app = new Router()
+const app = createRouter()
 
 app.get('/', () => render('home', {/* your template data (props) */}))
 
