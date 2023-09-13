@@ -148,7 +148,14 @@ import {render} from 'leanweb-kit/runtime'
 
 const app = createRouter()
 
-app.get('/', () => render('home', {/* your template data (props) */}))
+// GET /
+app.get("/", () => new Response("Hello, world!"));
+
+// DELETE /book/:title where :title is a route parameter
+app.delete("/book/:title", async (ctx) => {
+  // Parameters are available in ctx.params
+  return new Response(`Deleted book: ${ctx.params.title}`);
+});
 
 // ...
 ```
@@ -167,4 +174,30 @@ app.get('/', () => render('home/index'))
 // or
 
 app.get('/', () => render('home/index.html'))
+```
+
+## Session
+
+```ts
+import { cookie, session, SignedCookieStore } from "leanweb-kit/runtime/session";
+
+// ...
+
+app.use(cookie());
+
+app.use(
+  session({
+    store: new SignedCookieStore(
+      await SignedCookieStore.generateKeysFromSecrets(["secret"]),
+    ),
+    // Default session data when a new session is created.
+    // It can be a function.
+    // It is shallow cloned, if you need a deep clone, use a function.
+    defaultSessionData: {},
+  }),
+);
+
+app.get('/', (ctx) => {
+  return new Response(JSON.stringify(ctx.session.data));
+});
 ```
