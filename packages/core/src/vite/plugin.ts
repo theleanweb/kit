@@ -405,6 +405,10 @@ export async function leanweb(user_config?: Config) {
 
       if (html_file_regex.test(id)) {
         const program = Effect.gen(function* ($) {
+          const display_id = id.replace(config.files.views, "");
+
+          yield* $(Effect.log(`compiling ${display_id}`));
+
           const code = yield* $(
             isMarkdown(id)
               ? pipe(
@@ -463,8 +467,10 @@ export async function leanweb(user_config?: Config) {
             })
           );
 
+          yield* $(Effect.log(`compiled ${display_id}`));
+
           return component;
-        });
+        }).pipe(Effect.withLogSpan("time"));
 
         const result = await pipe(program, Effect.either, Effect.runPromise);
 
