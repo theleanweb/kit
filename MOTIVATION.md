@@ -1,0 +1,5 @@
+There are a multitude of tools out there dedicated to dealing with JavaScript, transforming, transpiling, minifying etc JavaScript. In the web landscape today, the primary focus is on building things with JavaScript and then trying to optimize the things we build with JavaScript with more JavaScript. Which has lead to an ever increase in complexity and a slow and poorer web for all.
+
+There are not many tools built for dealing with the web stack as a whole. That is from HTML, to CSS and finally JavaScript. I increasingly became frustrated with the web landscape, and how much complexity is involved in building a web application today.
+
+Lean Web Kit was born to fill the huge gap in modern web development. No complexities of JavaScript, a world free from the noise of JavaScript frameworks and tooling. You want to build an application? Start with HTML and CSS, then sprinkle some JavaScript for interactivity.
