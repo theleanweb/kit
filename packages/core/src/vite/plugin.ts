@@ -120,10 +120,6 @@ export async function leanweb(user_config?: Config) {
       vite_server = server;
       return dev(server, vite_config_, config);
     },
-    /**
-     * Adds the SvelteKit middleware to do SSR in preview mode.
-     * @see https://vitejs.dev/guide/api-plugin.html#configurepreviewserver
-     */
     configurePreviewServer(vite) {
       return preview(vite, vite_config_, config);
     },
@@ -331,7 +327,7 @@ export async function leanweb(user_config?: Config) {
 
             const link = colors
               .bold()
-              .cyan("https://kit.svelte.dev/docs/adapters");
+              .cyan("https://github.com/theleanweb/kit");
 
             console.log(
               `See ${link} to learn how to configure your app to run on the platform of your choosing`
@@ -405,7 +401,7 @@ export async function leanweb(user_config?: Config) {
 
       if (html_file_regex.test(id)) {
         const program = Effect.gen(function* ($) {
-          const display_id = id.replace(config.files.views, "");
+          const display_id = id.replace(cwd, "");
 
           yield* $(Effect.log(`compiling ${display_id}`));
 

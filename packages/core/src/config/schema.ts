@@ -18,7 +18,7 @@ export const Config = S.object({
 
   env: S.object({
     privatePrefix: S.string().optional().default(""),
-    schema: S.string().optional().default("src/env"),
+    // schema: S.string().optional().default("src/env"),
     dir: S.string().optional().default(process.cwd()),
     publicPrefix: S.string().optional().default("PUBLIC_"),
   })
