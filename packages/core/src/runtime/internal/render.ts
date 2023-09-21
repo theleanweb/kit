@@ -10,10 +10,43 @@ import { views } from "__GENERATED__/views.js";
 import { VITE_HTML_CLIENT } from "../../utils/constants.js";
 import { CompileError, coalesce_to_error } from "../../utils/error.js";
 import { prepareError, template } from "./error.js";
+import { SSRComponent } from "../../types/internal.js";
 
 class RenderError {
   readonly _tag = "RenderError";
   constructor(readonly module: string, readonly originalError: Error) {}
+}
+
+export function renderToString(component: SSRComponent, props: object = {}) {
+  const rendered = component.render(props);
+
+  const document = load(rendered.html);
+  const head = document("head");
+
+  head.append(rendered.head);
+
+  if (rendered.css.code) {
+    head.append(`<style>${rendered.css.code}</style>`);
+  }
+
+  if (__LEANWEB_DEV__) {
+    head.append(VITE_HTML_CLIENT);
+  }
+
+  if (options.service_worker) {
+    const opts = __LEANWEB_DEV__ ? ", { type: 'module' }" : "";
+
+    document("body").append(dedent`
+    <script>
+    if ('serviceWorker' in navigator) {
+      addEventListener('load', function() {
+        navigator.serviceWorker.register('service-worker.js'${opts});
+      });
+    }
+    </script>`);
+  }
+
+  return document.html();
 }
 
 export async function render(
@@ -41,38 +74,25 @@ export async function render(
 
     const rendered = yield* $(
       Effect.try({
-        try: () => component.render(props),
+        try: () => renderToString(component, props),
         catch: (e) => new RenderError(entry, coalesce_to_error(e)),
       })
     );
 
-    const document = load(rendered.html);
-    const head = document("head");
+    // if (options.service_worker) {
+    //   const opts = __LEANWEB_DEV__ ? ", { type: 'module' }" : "";
 
-    head.append(rendered.head);
+    //   document("body").append(dedent`
+    //     <script>
+    //     if ('serviceWorker' in navigator) {
+    //       addEventListener('load', function() {
+    //         navigator.serviceWorker.register('service-worker.js'${opts});
+    //       });
+    //     }
+    //     </script>`);
+    // }
 
-    if (rendered.css.code) {
-      head.append(`<style>${rendered.css.code}</style>`);
-    }
-
-    if (__LEANWEB_DEV__) {
-      head.append(VITE_HTML_CLIENT);
-    }
-
-    if (options.service_worker) {
-      const opts = __LEANWEB_DEV__ ? ", { type: 'module' }" : "";
-
-      document("body").append(dedent`
-        <script>
-        if ('serviceWorker' in navigator) {
-          addEventListener('load', function() {
-            navigator.serviceWorker.register('service-worker.js'${opts});
-          });
-        }
-        </script>`);
-    }
-
-    return new Response(document.html(), {
+    return new Response(rendered, {
       headers: { "Content-Type": "text/html" },
       ...init,
     });
