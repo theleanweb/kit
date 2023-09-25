@@ -14,12 +14,12 @@ app.use(
     // Default session data when a new session is created.
     // It can be a function.
     // It is shallow cloned, if you need a deep clone, use a function.
-    defaultSessionData: {},
+    defaultSessionData: { user: null },
   })
 );
 
 app.get("/", (ctx) => {
-  ctx.session.data = { user: { a: { b: 1 } } };
+  ctx.session.data = { user: "123" };
   return new Response('Go to <a href="/about">About</a>', {
     headers: { "Content-Type": "text/html" },
   });
