@@ -5,16 +5,16 @@ import { Env } from "../types/internal.js";
 import { GENERATED_COMMENT } from "../utils/constants.js";
 import { get_env } from "../vite/utils/env/load.js";
 import {
-    create_dynamic_types,
-    create_static_types,
+  create_dynamic_types,
+  create_static_types,
 } from "../vite/utils/env/resolve.js";
 import { write_if_changed } from "./utils.js";
 
 // TODO these types should be described in a neutral place, rather than
 // inside either `packages/kit` or `kit.svelte.dev`
-const descriptions_dir = fileURLToPath(
-  new URL("../../../src/types/synthetic", import.meta.url)
-);
+// const descriptions_dir = fileURLToPath(
+//   new URL("../../../src/types/synthetic", import.meta.url)
+// );
 
 function read_description(filename: string) {
   //   const content = fs.readFileSync(`${descriptions_dir}/${filename}`, "utf8");
@@ -34,7 +34,7 @@ const template = (
 ) => `
 ${GENERATED_COMMENT}
 
-/// <reference types="core" />
+/// <reference types="leanweb-kit" />
 
 ${read_description("$env+static+private.md")}
 ${create_static_types("private", env)}
