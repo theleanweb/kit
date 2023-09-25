@@ -90,7 +90,7 @@ export function get_tsconfig(
 
   const include = new Set([
     "ambient.d.ts",
-    "leanweb.d.ts",
+    config_relative("leanweb.d.ts"),
     "./types/**/$types.d.ts",
     config_relative("vite.config.ts"),
   ]);
