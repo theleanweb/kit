@@ -12,7 +12,7 @@ import * as vite from "vite";
 import { compile as compileSvx } from "mdsvex";
 import { compile, preprocess } from "svelte/compiler";
 
-import * as default_preprocess from "svelte-preprocess";
+import default_preprocess from "svelte-preprocess";
 
 import * as E from "@effect/data/Either";
 import { pipe } from "@effect/data/Function";
