@@ -444,7 +444,8 @@ export async function leanweb(user_config?: Config) {
               try: () =>
                 preprocess(
                   without_vite_client,
-                  [default_preprocess.default()],
+                  // @ts-expect-error
+                  [default_preprocess()],
                   { filename: id }
                 ),
               catch: (e) => new CompileError(e as any),
@@ -567,11 +568,10 @@ export async function leanweb(user_config?: Config) {
         if (result) code_ = result.code;
       }
 
-      const preprocessed = await preprocess(
-        code_,
-        [default_preprocess.default()],
-        { filename: id }
-      );
+      // @ts-expect-error
+      const preprocessed = await preprocess(code_, [default_preprocess()], {
+        filename: id,
+      });
 
       const res = compile(preprocessed.code, { generate: "ssr" });
       return res.js;
