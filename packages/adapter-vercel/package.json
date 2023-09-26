@@ -27,6 +27,7 @@
   "dependencies": {
     "@hattip/adapter-node": "^0.0.34",
     "@hattip/adapter-vercel-edge": "^0.0.34",
+    "@hono/node-server": "^1.2.0",
     "@vercel/nft": "^0.22.6",
     "esbuild": "^0.17.18"
   },
