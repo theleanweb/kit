@@ -1,1 +1,0 @@
-export * from "@hattip/cors";
