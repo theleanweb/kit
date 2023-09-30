@@ -1,4 +1,5 @@
 export { render, renderToString } from "./internal/render.js";
+export * from "./session/sessions.js";
 
 export {
   Hono as Router,
