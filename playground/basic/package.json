@@ -28,6 +28,7 @@
     "@barba/core": "^2.9.7",
     "@hattip/cookie": "^0.0.34",
     "@hattip/session": "^0.0.34",
+    "hono": "^3.7.2",
     "svelte": "^4.0.5",
     "zod": "^3.21.4"
   }
