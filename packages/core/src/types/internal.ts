@@ -1,4 +1,4 @@
-import { Config } from "../config/schema.js";
+import { Config, ValidatedConfig } from "../config/schema.js";
 
 export interface SSRComponent {
   render(props: Record<string, any>): {
@@ -29,6 +29,7 @@ export interface BuildData {
 export interface SSROptions {
   service_worker: boolean;
   env_private_prefix: string;
+  files: ValidatedConfig["files"];
   templates: {
     error(values: { message: string; status: number }): string;
   };
