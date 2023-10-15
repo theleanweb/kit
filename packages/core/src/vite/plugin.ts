@@ -163,6 +163,7 @@ export async function leanweb(user_config?: Config) {
         define: {
           __LEANWEB_DEV__: !is_build ? "true" : "false",
           __LEANWEB_ADAPTER_NAME__: s(config.adapter?.name),
+          __LEANWEB_MODE__: vite_config_env.command,
         },
         server: {
           sourcemapIgnoreList,
