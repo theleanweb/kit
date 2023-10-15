@@ -13,9 +13,9 @@
   "author": "Joshua Amaju",
   "license": "ISC",
   "devDependencies": {
+    "@leanweb-kit/adapter-vercel": "workspace:*",
     "@types/node": "^20.4.2",
     "adapter-node": "workspace:*",
-    "adapter-vercel": "workspace:*",
     "autoprefixer": "^10.4.14",
     "leanweb-kit": "workspace:*",
     "postcss": "^8.4.27",
@@ -28,8 +28,7 @@
     "@barba/core": "^2.9.7",
     "@hattip/cookie": "^0.0.34",
     "@hattip/session": "^0.0.34",
-    "@hono/node-server": "^1.1.0",
-    "hono": "^3.3.1",
+    "hono": "^3.7.2",
     "svelte": "^4.0.5",
     "zod": "^3.21.4"
   }

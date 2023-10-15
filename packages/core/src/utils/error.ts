@@ -7,10 +7,10 @@ export function coalesce_to_error(err: unknown) {
 
 export class CompileError {
   readonly _tag = "CompileError";
-  constructor(readonly originalError: any) {}
+  constructor(readonly cause: any) {}
 }
 
 export class HTMLTransformError {
   readonly _tag = "HTMLTransformError";
-  constructor(readonly originalError: any) {}
+  constructor(readonly cause: any) {}
 }

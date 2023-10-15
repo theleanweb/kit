@@ -7,23 +7,23 @@ import { buildErrorMessage } from "vite";
 
 import color from "kleur";
 
-import sirv from "sirv";
 import { Server } from "connect";
 import mime from "mime";
+import sirv from "sirv";
 
-import { createMiddleware } from "@hattip/adapter-node";
-import { Router } from "@hattip/router";
+import { Hono } from "hono";
 
 import * as O from "@effect/data/Option";
 import * as Effect from "@effect/io/Effect";
 
 import { ValidatedConfig } from "../../config/schema.js";
+import { getRequest, setResponse } from "../../node/index.js";
 import { installPolyfills } from "../../node/polyfills.js";
 import * as sync from "../../sync/index.js";
+import { coalesce_to_error } from "../../utils/error.js";
 import { to_fs } from "../../utils/filesystem.js";
 import { should_polyfill } from "../../utils/platform.js";
 import { resolveEntry } from "../../utils/utils.js";
-import { coalesce_to_error } from "../../utils/error.js";
 
 const script_file_regex = /\.(js|ts)$/;
 
@@ -274,11 +274,27 @@ export async function dev(
 
         const module = await vite.ssrLoadModule(config.files.entry);
 
-        const router = module.default as Router;
+        const server = module.default as Hono;
 
-        const middleware = createMiddleware(router.buildHandler());
+        let request;
 
-        middleware(req, res, next);
+        try {
+          request = await getRequest({ base, request: req });
+        } catch (err: any) {
+          res.statusCode = err.status || 400;
+          return res.end("Invalid request body");
+        }
+
+        const rendered = await server.fetch(request);
+
+        if (rendered.status === 404) {
+          // @ts-expect-error
+          serve_static_middleware.handle(req, res, () => {
+            setResponse(res, rendered);
+          });
+        } else {
+          setResponse(res, rendered);
+        }
       } catch (e) {
         const error = coalesce_to_error(e);
         res.statusCode = 500;

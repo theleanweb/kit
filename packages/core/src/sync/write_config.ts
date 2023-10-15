@@ -22,6 +22,7 @@ export function write_config(config: ValidatedConfig, output: string) {
     dedent`
     export const options = {
       service_worker: ${has_service_worker},
+      files: ${JSON.stringify(config.files)},
       env_public_prefix: '${config.env.publicPrefix}',
     };
     `

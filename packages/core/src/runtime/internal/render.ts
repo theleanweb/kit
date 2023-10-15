@@ -1,23 +1,28 @@
 import { load } from "cheerio";
 import { dedent } from "ts-dedent";
 
+import type { Context } from "hono";
+
 import * as A from "@effect/data/ReadonlyArray";
 import * as Effect from "@effect/io/Effect";
 
 import { options } from "__GENERATED__/config.js";
 import { views } from "__GENERATED__/views.js";
 
+import { pipe } from "@effect/data/Function";
+import { NoSuchElementException } from "@effect/io/Cause";
+import { SSRComponent } from "../../types/internal.js";
 import { VITE_HTML_CLIENT } from "../../utils/constants.js";
 import { CompileError, coalesce_to_error } from "../../utils/error.js";
 import { prepareError, template } from "./error.js";
-import { SSRComponent } from "../../types/internal.js";
+import { notFound, serverError } from "./templates.js";
 
 class RenderError {
   readonly _tag = "RenderError";
-  constructor(readonly module: string, readonly originalError: Error) {}
+  constructor(readonly module: string, readonly cause: Error) {}
 }
 
-export function renderToString(component: SSRComponent, props: object = {}) {
+export function renderComponent(component: SSRComponent, props: object = {}) {
   const rendered = component.render(props);
 
   const document = load(rendered.html);
@@ -49,12 +54,15 @@ export function renderToString(component: SSRComponent, props: object = {}) {
   return document.html();
 }
 
-export async function render(
+export function render(
   view: string,
-  props: object = {},
-  init?: ResponseInit | undefined
-) {
-  const program = Effect.gen(function* ($) {
+  props: object = {}
+): Effect.Effect<
+  never,
+  NoSuchElementException | CompileError | RenderError,
+  string
+> {
+  return Effect.gen(function* ($) {
     const entries = [
       view,
       `${view}.html`,
@@ -72,81 +80,54 @@ export async function render(
       })
     );
 
-    const rendered = yield* $(
+    return yield* $(
       Effect.try({
-        try: () => renderToString(component, props),
+        try: () => renderComponent(component, props),
         catch: (e) => new RenderError(entry, coalesce_to_error(e)),
       })
     );
+  });
+}
 
-    // if (options.service_worker) {
-    //   const opts = __LEANWEB_DEV__ ? ", { type: 'module' }" : "";
-
-    //   document("body").append(dedent`
-    //     <script>
-    //     if ('serviceWorker' in navigator) {
-    //       addEventListener('load', function() {
-    //         navigator.serviceWorker.register('service-worker.js'${opts});
-    //       });
-    //     }
-    //     </script>`);
-    // }
-
-    return new Response(rendered, {
-      headers: { "Content-Type": "text/html" },
-      ...init,
-    });
-  }).pipe(
+export function view(
+  context: Context,
+  view: string,
+  props: object = {},
+  init?: ResponseInit
+) {
+  return pipe(
+    render(view, props),
+    Effect.map((html) => context.html(html, init)),
     Effect.catchTag("NoSuchElementException", () => {
-      const message = `View "${view}" not found in views directory`;
+      const html = notFound({
+        view,
+        dir: options.files.views,
+        mode: __LEANWEB_DEV__ ? "serve" : "build",
+      });
 
-      const html = /* html */ `
-      <!DOCTYPE html>
-      <html lang="en">
-        <head>
-          <meta charset="UTF-8" />
-          <title>View Not Found</title>
-          ${__LEANWEB_DEV__ ? VITE_HTML_CLIENT : ""}
-        </head>
-        
-        <body>
-          <p>${message}</p>
-        </body>
-        
-      </html>
-      `;
-
-      return Effect.succeed(
-        new Response(html, {
-          ...init,
-          status: 404,
-          headers: { "Content-Type": "text/html" },
-        })
-      );
+      return Effect.succeed(context.html(html, { status: 404 }));
     }),
     Effect.catchAll((e) => {
       let html: string;
 
+      // console.log(e.cause);
+      // console.log(e.cause, viewError(e.cause));
+
       if (__LEANWEB_DEV__) {
         // To get around class instanceof check failing due to a vite problem
         if ("_tag" in e && e._tag === "CompileError") {
-          html = template(e.originalError);
+          html = template(e.cause);
         } else {
-          html = template(prepareError(e.originalError));
+          html = template(prepareError(e.cause));
         }
       } else {
-        html = `<pre style="word-wrap: break-word; white-space: pre-wrap;">Internal Server Error</pre>`;
+        html = serverError;
       }
 
-      return Effect.succeed(
-        new Response(html, {
-          ...init,
-          status: 500,
-          headers: { "Content-Type": "text/html" },
-        })
-      );
-    })
+      return Effect.succeed(context.html(html, { status: 500 }));
+    }),
+    Effect.runPromise
   );
-
-  return Effect.runPromise(program);
 }
+
+export function renderToString() {}
