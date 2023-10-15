@@ -12,6 +12,7 @@
   "scripts": {
     "dev": "tsc --w",
     "build": "tsc",
+    "release": "release publish",
     "prepublish": "rimraf dist && pnpm build"
   },
   "keywords": [
@@ -23,6 +24,7 @@
   "author": "Joshua Amaju",
   "license": "ISC",
   "devDependencies": {
+    "@ossjs/release": "^0.8.0",
     "@types/connect": "^3.4.35",
     "@types/cookie": "^0.5.2",
     "@types/mime": "^3.0.1",
