@@ -5,18 +5,17 @@ import type { Context } from "hono";
 
 import * as A from "@effect/data/ReadonlyArray";
 import * as Effect from "@effect/io/Effect";
-import * as Cause from "@effect/io/Cause";
 
 import { options } from "__GENERATED__/config.js";
 import { views } from "__GENERATED__/views.js";
 
+import { pipe } from "@effect/data/Function";
 import { NoSuchElementException } from "@effect/io/Cause";
 import { SSRComponent } from "../../types/internal.js";
 import { VITE_HTML_CLIENT } from "../../utils/constants.js";
 import { CompileError, coalesce_to_error } from "../../utils/error.js";
 import { prepareError, template } from "./error.js";
-import { notFound, serverError, viewError } from "./templates.js";
-import { pipe } from "@effect/data/Function";
+import { notFound, serverError } from "./templates.js";
 
 class RenderError {
   readonly _tag = "RenderError";
@@ -111,7 +110,7 @@ export function view(
     Effect.catchAll((e) => {
       let html: string;
 
-      console.log(e.cause);
+      // console.log(e.cause);
       // console.log(e.cause, viewError(e.cause));
 
       if (__LEANWEB_DEV__) {
