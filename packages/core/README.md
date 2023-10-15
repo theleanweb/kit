@@ -6,7 +6,7 @@ Toolkit for a lean web
 
 ## Features
 
-- Hot Module Reload
+- Live Reload
 - Templating with Svelte
 - Scoped CSS
 - Markdown and MDX support
@@ -19,20 +19,6 @@ Toolkit for a lean web
 
 - [Basic app](/playground/basic)
 - [Realworld app](/playground/realworldapp)
-
-## Project structure
-
-.
-└── app/
-    ├── src/
-    │   ├── views - your view templates/
-    │   │   ├── home.html
-    │   │   └── about.html
-    │   └── entry.ts - entry point for your application routes
-    ├── leanweb.d.ts
-    ├── vite.config.js
-    ├── package.json
-    └── tsconfig.json
 
 ## Gotchas
 
@@ -63,8 +49,8 @@ will not work, it has to be
 ## Getting started
 
 ```bash
-git clone https://github.com/theleanweb/leanweb-kit-starter.git
-cd leanweb-kit-starter
+git clone https://github.com/theleanweb/kit-starter.git
+cd kit-starter
 npm i
 npm run dev
 ```
@@ -93,7 +79,7 @@ export default defineConfig({
 ```bash
 mkdir src
 cd src
-touch entry.ts
+touch entry.js
 mkdir views
 touch home.html
 ```
@@ -101,9 +87,9 @@ touch home.html
 > entry.ts
 
 ```js
-import {createRouter} from 'leanweb-kit/runtime';
+import {Router} from 'leanweb-kit/runtime';
 
-const app = createRouter();
+const app = new Router();
 
 export default app
 ```
@@ -144,9 +130,7 @@ npm run preview
 [link](https://hono.dev/api/routing)
 
 ```ts
-import {render} from 'leanweb-kit/runtime'
-
-const app = createRouter()
+const app = new Router()
 
 // GET /
 app.get("/", () => new Response("Hello, world!"));
@@ -163,41 +147,17 @@ app.delete("/book/:title", async (ctx) => {
 ## Rendering
 
 ```ts
-// ...
-
-app.get('/', () => render('home', {/* your template data (props) */}))
-
-// or
-
-app.get('/', () => render('home/index'))
-
-// or
-
-app.get('/', () => render('home/index.html'))
-```
-
-## Session
-
-```ts
-import { cookie, session, SignedCookieStore } from "leanweb-kit/runtime/session";
+import {view} from 'leanweb-kit/runtime'
 
 // ...
 
-app.use(cookie());
+app.get('/', (context) => view(context, 'home', {/* your template data (props) */}))
 
-app.use(
-  session({
-    store: new SignedCookieStore(
-      await SignedCookieStore.generateKeysFromSecrets(["secret"]),
-    ),
-    // Default session data when a new session is created.
-    // It can be a function.
-    // It is shallow cloned, if you need a deep clone, use a function.
-    defaultSessionData: {},
-  }),
-);
+// or
 
-app.get('/', (ctx) => {
-  return new Response(JSON.stringify(ctx.session.data));
-});
+app.get('/', (context) => view(context, 'home/index'))
+
+// or
+
+app.get('/', (context) => view(context, 'home/index.html'))
 ```
