@@ -2,7 +2,8 @@
   "profiles": [
     {
       "name": "latest",
-      "use": "pnpm publish"
+      "prerelease": true,
+      "use": "pnpm publish --no-git-checks"
     }
   ]
 }
