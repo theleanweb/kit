@@ -12,6 +12,7 @@
   "scripts": {
     "dev": "tsc --w",
     "build": "tsc",
+    "release": "release publish",
     "prepublish": "rimraf dist && pnpm build"
   },
   "keywords": [
