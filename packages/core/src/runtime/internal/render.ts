@@ -130,4 +130,6 @@ export function view(
   );
 }
 
-export function renderToString() {}
+export function viewToString(view: string, props: object = {}) {
+  return Effect.runPromise(render(view, props));
+}
