@@ -6,7 +6,7 @@ import { write_config } from "./write_config.js";
 import { write_tsconfig } from "./write_tsconfig.js";
 import { collect_views, create_assets, write_views } from "./write_views.js";
 
-import * as Effect from "@effect/io/Effect";
+import * as Effect from "effect/Effect";
 import { write_server } from "./write_server.js";
 
 export function init(config: ValidatedConfig, mode: string) {

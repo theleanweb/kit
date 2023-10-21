@@ -1,9 +1,9 @@
 import * as path from "node:path";
 
-import * as RA from "@effect/data/ReadonlyArray";
-import * as Effect from "@effect/io/Effect";
+import * as RA from "effect/ReadonlyArray";
+import * as Effect from "effect/Effect";
+import { pipe } from "effect/Function";
 
-import { pipe } from "@effect/data/Function";
 import render from "dom-serializer";
 import { ChildNode, DomHandler } from "domhandler";
 import { Parser } from "htmlparser2";

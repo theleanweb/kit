@@ -1,11 +1,11 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
 
-import { pipe } from "@effect/data/Function";
-import * as O from "@effect/data/Option";
-import * as A from "@effect/data/ReadonlyArray";
-import * as Effect from "@effect/io/Effect";
-import * as Exit from "@effect/io/Exit";
+import { pipe } from "effect/Function";
+import * as O from "effect/Option";
+import * as A from "effect/ReadonlyArray";
+import * as Effect from "effect/Effect";
+import * as Exit from "effect/Exit";
 
 function exists(entry: string) {
   return pipe(

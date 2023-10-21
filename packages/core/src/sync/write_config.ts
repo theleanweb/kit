@@ -3,9 +3,9 @@ import { dedent } from "ts-dedent";
 import { ValidatedConfig } from "../config/schema.js";
 import { resolveEntry } from "../utils/utils.js";
 
-import { constFalse, constTrue, pipe } from "@effect/data/Function";
-import * as O from "@effect/data/Option";
-import * as Effect from "@effect/io/Effect";
+import { constFalse, constTrue, pipe } from "effect/Function";
+import * as O from "effect/Option";
+import * as Effect from "effect/Effect";
 
 export function write_config(config: ValidatedConfig, output: string) {
   const has_service_worker_ = pipe(

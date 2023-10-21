@@ -43,17 +43,11 @@
     "html.d.ts"
   ],
   "dependencies": {
-    "@effect/data": "^0.15.1",
-    "@effect/io": "^0.33.0",
-    "@hattip/adapter-node": "^0.0.34",
-    "@hattip/cookie": "^0.0.34",
-    "@hattip/cors": "^0.0.34",
-    "@hattip/router": "^0.0.34",
-    "@hattip/session": "^0.0.34",
     "cheerio": "1.0.0-rc.12",
     "cookie": "^0.5.0",
     "dom-serializer": "^2.0.0",
     "domhandler": "^5.0.3",
+    "effect": "2.0.0-next.50",
     "glob": "^10.3.3",
     "hono": "^3.7.2",
     "htmlparser2": "^9.0.0",

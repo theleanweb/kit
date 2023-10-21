@@ -6,9 +6,9 @@ import { View } from "../types/internal.js";
 
 import mime from "mime";
 
-import { pipe } from "@effect/data/Function";
-import * as A from "@effect/data/ReadonlyArray";
-import * as Effect from "@effect/io/Effect";
+import { pipe } from "effect/Function";
+import * as Effect from "effect/Effect";
+import * as A from "effect/ReadonlyArray";
 
 export function create_assets(config: ValidatedConfig) {
   return pipe(

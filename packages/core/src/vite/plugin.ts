@@ -14,10 +14,10 @@ import { compile, preprocess } from "svelte/compiler";
 
 import default_preprocess from "svelte-preprocess";
 
-import * as E from "@effect/data/Either";
-import { pipe } from "@effect/data/Function";
-import * as O from "@effect/data/Option";
-import * as Effect from "@effect/io/Effect";
+import * as Either from "effect/Either";
+import { pipe } from "effect/Function";
+import * as O from "effect/Option";
+import * as Effect from "effect/Effect";
 
 import * as fs from "node:fs";
 import * as path from "node:path";
@@ -80,9 +80,9 @@ export async function leanweb(user_config?: Config) {
 
   const parsed_user_config = parse_config(user_config ?? ({} as Config));
 
-  const resolved_config = pipe(parsed_user_config, E.mapRight(resolve_config));
+  const resolved_config = pipe(parsed_user_config, Either.map(resolve_config));
 
-  if (E.isLeft(resolved_config)) {
+  if (Either.isLeft(resolved_config)) {
     throw resolved_config.left;
   }
 
@@ -314,7 +314,7 @@ export async function leanweb(user_config?: Config) {
               )} to preview your production build locally.`
           );
 
-          if (E.isRight(parsed_user_config)) {
+          if (Either.isRight(parsed_user_config)) {
             rimraf(
               `${views_out_directory}/${parsed_user_config.right.files.views}`
             );
@@ -471,7 +471,7 @@ export async function leanweb(user_config?: Config) {
 
         const result = await pipe(program, Effect.either, Effect.runPromise);
 
-        if (E.isLeft(result)) {
+        if (Either.isLeft(result)) {
           throw result.left;
         }
 
@@ -642,8 +642,8 @@ function isMarkdown(filename: string) {
 function parse_config(config: Config) {
   const result = Config.safeParse(config);
   return result.success
-    ? E.right(result.data as ValidatedConfig)
-    : E.left(new ConfigParseError());
+    ? Either.right(result.data as ValidatedConfig)
+    : Either.left(new ConfigParseError());
 }
 
 function resolve_config(config: ValidatedConfig) {

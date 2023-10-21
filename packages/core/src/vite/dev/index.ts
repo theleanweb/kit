@@ -13,8 +13,8 @@ import sirv from "sirv";
 
 import { Hono } from "hono";
 
-import * as O from "@effect/data/Option";
-import * as Effect from "@effect/io/Effect";
+import * as O from "effect/Option";
+import * as Effect from "effect/Effect";
 
 import { ValidatedConfig } from "../../config/schema.js";
 import { getRequest, setResponse } from "../../node/index.js";

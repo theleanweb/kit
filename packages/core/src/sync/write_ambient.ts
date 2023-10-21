@@ -1,5 +1,4 @@
 import * as path from "node:path";
-import { fileURLToPath } from "node:url";
 import { ValidatedConfig } from "../config/schema.js";
 import { Env } from "../types/internal.js";
 import { GENERATED_COMMENT } from "../utils/constants.js";

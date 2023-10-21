@@ -3,14 +3,14 @@ import { dedent } from "ts-dedent";
 
 import type { Context } from "hono";
 
-import * as A from "@effect/data/ReadonlyArray";
-import * as Effect from "@effect/io/Effect";
+import * as A from "effect/ReadonlyArray";
+import * as Effect from "effect/Effect";
+import { pipe } from "effect/Function";
+import { NoSuchElementException } from "effect/Cause";
 
 import { options } from "__GENERATED__/config.js";
 import { views } from "__GENERATED__/views.js";
 
-import { pipe } from "@effect/data/Function";
-import { NoSuchElementException } from "@effect/io/Cause";
 import { SSRComponent } from "../../types/internal.js";
 import { VITE_HTML_CLIENT } from "../../utils/constants.js";
 import { CompileError, coalesce_to_error } from "../../utils/error.js";

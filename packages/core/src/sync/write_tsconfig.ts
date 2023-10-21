@@ -3,7 +3,7 @@ import * as path from "node:path";
 import colors from "kleur";
 import ts from "typescript";
 
-import * as O from "@effect/data/Option";
+import * as O from "effect/Option";
 
 import { write_if_changed } from "./utils.js";
 import { posixify } from "../utils/filesystem.js";
