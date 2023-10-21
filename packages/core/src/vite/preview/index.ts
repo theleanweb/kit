@@ -1,19 +1,19 @@
-import { join } from "node:path";
-import { pathToFileURL } from "node:url";
 import {
   Server as HttpServer,
   IncomingMessage,
   ServerResponse,
 } from "node:http";
+import { join } from "node:path";
+import { pathToFileURL } from "node:url";
 
-import sirv from "sirv";
 import { Server } from "connect";
+import sirv from "sirv";
 import { ResolvedConfig } from "vite";
 
-import { createMiddleware } from "@hattip/adapter-node";
-import { Router } from "@hattip/router";
+import { Hono } from "hono";
 
 import { ValidatedConfig } from "../../config/schema.js";
+import { getRequest, setResponse } from "../../node/index.js";
 import { installPolyfills } from "../../node/polyfills.js";
 import { should_polyfill } from "../../utils/platform.js";
 
@@ -34,9 +34,11 @@ export async function preview(
 
   const dir = join(config.outDir, "output/server");
 
+  const protocol = vite_config.preview.https ? "https" : "http";
+
   const module = await import(pathToFileURL(join(dir, "index.js")).href);
 
-  const router = module.default as Router;
+  const server = module.default as Hono;
 
   return () => {
     // generated client assets and the contents of `static`
@@ -58,8 +60,23 @@ export async function preview(
     );
 
     // SSR
-    const middleware = createMiddleware(router.buildHandler());
-    vite.middlewares.use(middleware);
+    vite.middlewares.use(async (req, res) => {
+      const host = req.headers["host"];
+
+      let request;
+
+      try {
+        request = await getRequest({
+          base: `${protocol}://${host}`,
+          request: req,
+        });
+      } catch (err: any) {
+        res.statusCode = err.status || 400;
+        return res.end("Invalid request body");
+      }
+
+      setResponse(res, await server.fetch(request));
+    });
   };
 }
 
