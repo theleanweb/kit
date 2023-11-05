@@ -3,3 +3,5 @@ pnpm-lock.yaml
 dist
 build
 .leanweb
+
+vite.config.*.timestamp-*
