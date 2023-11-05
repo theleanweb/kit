@@ -1,7 +1,8 @@
 import { deleteCookie, getCookie, setCookie } from "hono/cookie";
-import { Router, view } from "leanweb-kit/runtime";
+import { view } from "leanweb-kit/runtime";
+import { Hono } from "hono";
 
-const app = new Router();
+const app = new Hono();
 
 app.get("/", (ctx) => {
   setCookie(ctx, "age", "20");
