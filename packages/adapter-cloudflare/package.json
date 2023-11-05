@@ -1,0 +1,46 @@
+{
+  "name": "@leanweb-kit/adapter-cloudflare",
+  "version": "0.0.1",
+  "description": "",
+  "type": "module",
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "build": "esbuild src/worker.js --bundle --outfile=files/worker.js --external:SERVER --format=esm",
+    "check": "tsc --skipLibCheck",
+    "prepublishOnly": "pnpm build"
+  },
+  "exports": {
+    ".": {
+      "types": "./index.d.ts",
+      "import": "./index.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "types": "index.d.ts",
+  "files": [
+    "files",
+    "index.js",
+    "index.d.ts",
+    "ambient.d.ts"
+  ],
+  "keywords": [],
+  "author": "Joshua Amaju",
+  "license": "ISC",
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20231025.0",
+    "@types/node": "^20.8.10",
+    "@types/ws": "^8.5.8",
+    "hono": "^3.9.2",
+    "leanweb-kit": "workspace:^",
+    "typescript": "^5.2.2"
+  },
+  "peerDependencies": {
+    "leanweb-kit": "workspace:^"
+  },
+  "dependencies": {
+    "esbuild": "^0.17.18",
+    "worktop": "^0.7.3"
+  }
+}
