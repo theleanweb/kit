@@ -38,7 +38,7 @@ export default function () {
       await esbuild.build({
         platform: 'node',
         conditions: ["worker", "node"],
-        sourcemap: "linked",
+        sourcemap: false,
         target: "es2022",
         entryPoints: [`${tmp}/_worker.js`],
         outfile: `${dest}/_worker.js`,
