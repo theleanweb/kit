@@ -1,2 +1,2 @@
-import { installPolyfills } from 'core/node/polyfills';
+import { installPolyfills } from 'leanweb-kit/node/polyfills';
 installPolyfills();

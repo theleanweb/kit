@@ -1,12 +1,11 @@
 import { env } from "ENV";
-import Router from "SERVER";
+import server from "SERVER";
 
-import { dirname, join } from "node:path";
+import { dirname, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import { createServer } from "node:http";
 
-import { createMiddleware } from "@hattip/adapter-node";
-import sirv from "sirv";
+import { serve } from "@hono/node-server";
+import { serveStatic } from "@hono/node-server/serve-static";
 
 export const path = env("SOCKET_PATH", false);
 export const host = env("HOST", "0.0.0.0");
@@ -14,15 +13,14 @@ export const port = env("PORT", !path && "3000");
 
 const dir = dirname(fileURLToPath(import.meta.url));
 
-const assets = sirv(join(dir, 'client'));
-const middleware = createMiddleware(Router.buildHandler());
+const assets = relative(process.cwd(), resolve(dir, "./client"));
 
-const server = createServer(
-  (req, res) => assets(req, res, () => middleware(req, res)),
-)
+server.use("/*", serveStatic({ root: assets }));
 
-server.listen({port, host})
+const handle = serve(server);
 
-console.log(`Server listening on http://${host}:${port}`);
+handle.listen({ path, host, port }, () => {
+  console.log(`Listening on ${path ? path : host + ":" + port}`);
+});
 
-export { server };
+export { handle as server };
