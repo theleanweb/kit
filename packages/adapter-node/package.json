@@ -4,6 +4,9 @@
   "description": "",
   "license": "MIT",
   "type": "module",
+  "publishConfig": {
+    "access": "public"
+  },
   "exports": {
     ".": {
       "types": "./index.d.ts",
