@@ -13,6 +13,8 @@ export default function () {
       const tmp = builder.getBuildDirectory("cloudflare-tmp");
 
       builder.rimraf(dest);
+      builder.mkdirp(dest);
+
       builder.rimraf(tmp);
       builder.mkdirp(tmp);
 
