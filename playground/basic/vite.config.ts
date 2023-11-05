@@ -1,6 +1,6 @@
 import { defineConfig } from "vite";
 import { leanweb } from "leanweb-kit/vite";
-import adapter from "adapter-node";
+import adapter from "@leanweb-kit/adapter-cloudflare";
 import path from "node:path";
 
 export default defineConfig({
