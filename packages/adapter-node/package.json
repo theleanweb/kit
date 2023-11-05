@@ -1,5 +1,5 @@
 {
-  "name": "adapter-node",
+  "name": "@leanweb-kit/adapter-node",
   "version": "0.1.0",
   "description": "",
   "license": "MIT",
