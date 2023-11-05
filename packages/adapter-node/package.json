@@ -19,7 +19,8 @@
   ],
   "scripts": {
     "dev": "rimraf files && rollup -cw",
-    "build": "rimraf files && rollup -c"
+    "build": "rimraf files && rollup -c",
+    "prepublish": "pnpm build"
   },
   "devDependencies": {
     "@types/node": "^16.18.6",
