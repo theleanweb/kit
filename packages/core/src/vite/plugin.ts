@@ -65,7 +65,7 @@ const SimpleLogger = Logger.make(({ logLevel, message, date }) => {
   console.log(`${color(`${logLevel.label}`)} ${message}`);
 });
 
-const FS = FileSystemLive.pipe(Layer.use(NodeFileSystem.layer));
+const CoreFileSystem = FileSystemLive.pipe(Layer.use(NodeFileSystem.layer));
 
 const html_file_regex = /\.html$/;
 
@@ -81,8 +81,6 @@ const cwd = process.cwd();
 const s = JSON.stringify;
 
 let build_step: "client" | "server";
-
-// let manifest: { assets: Asset[]; views: View[] };
 
 export async function leanweb(user_config?: Config) {
   let vite_env_: ConfigEnv;
@@ -108,7 +106,7 @@ export async function leanweb(user_config?: Config) {
   const layer = Layer.mergeAll(
     Logger.replace(Logger.defaultLogger, SimpleLogger),
     NodeFileSystem.layer,
-    FS,
+    CoreFileSystem,
     coreConfig
   );
 
