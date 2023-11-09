@@ -515,15 +515,11 @@ export async function leanweb(user_config?: Config) {
           yield* $(Effect.log(`compiled ${display_id}`));
 
           return component;
-        }).pipe(Effect.withLogSpan("time"));
+        });
 
-        const result = await pipe(program, Effect.either, runPromise);
+        const result = await runPromise(program);
 
-        if (Either.isLeft(result)) {
-          throw result.left;
-        }
-
-        return result.right.js;
+        return result.js;
       }
     },
   };
