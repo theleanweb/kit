@@ -18,6 +18,11 @@ import * as Either from "effect/Either";
 import { pipe } from "effect/Function";
 import * as O from "effect/Option";
 import * as Effect from "effect/Effect";
+import * as Runtime from "effect/Runtime";
+import * as Layer from "effect/Layer";
+import * as Logger from "effect/Logger";
+import * as LogLevel from "effect/LogLevel";
+import * as LogSpan from "effect/LogSpan";
 
 import * as fs from "node:fs";
 import * as path from "node:path";
@@ -42,6 +47,26 @@ import { preview } from "./preview/index.js";
 import { get_env } from "./utils/env/load.js";
 import { create_static_module } from "./utils/env/resolve.js";
 import { assets_base, logger } from "./utils/index.js";
+
+const logLevelColors = {
+  [LogLevel.Error._tag]: colors.red,
+  [LogLevel.Info._tag]: colors.gray,
+  [LogLevel.Fatal._tag]: colors.red,
+  [LogLevel.Debug._tag]: colors.yellow,
+};
+
+const SimpleLogger = Logger.make(({ logLevel, message, date }) => {
+  const color = logLevelColors[logLevel._tag];
+  console.log(`${color(`${logLevel.label}`)} ${message}`);
+});
+
+const layer = Logger.replace(Logger.defaultLogger, SimpleLogger);
+
+const runtime = Layer.toRuntime(layer).pipe(Effect.scoped, Effect.runSync);
+
+const runFork = Runtime.runFork(runtime);
+const runSync = Runtime.runSync(runtime);
+const runPromise = Runtime.runPromise(runtime);
 
 class ConfigParseError {
   readonly _tag = "ConfigParseError";
@@ -88,7 +113,7 @@ export async function leanweb(user_config?: Config) {
 
   const config = resolved_config.right;
 
-  const entry = Effect.runSync(resolveEntry(config.files.entry));
+  const entry = runSync(resolveEntry(config.files.entry));
 
   if (O.isNone(entry)) {
     throw new NoEntryFileError();
@@ -270,7 +295,7 @@ export async function leanweb(user_config?: Config) {
           },
         });
 
-        const service_worker = Effect.runSync(service_worker_file);
+        const service_worker = runSync(service_worker_file);
 
         if (O.isSome(service_worker)) {
           if (config.paths.assets) {
@@ -469,7 +494,7 @@ export async function leanweb(user_config?: Config) {
           return component;
         }).pipe(Effect.withLogSpan("time"));
 
-        const result = await pipe(program, Effect.either, Effect.runPromise);
+        const result = await pipe(program, Effect.either, runPromise);
 
         if (Either.isLeft(result)) {
           throw result.left;
@@ -662,7 +687,7 @@ function resolve_config(config: ValidatedConfig) {
 }
 
 function create_service_worker_module(config: ValidatedConfig) {
-  const assets = Effect.runSync(create_assets(config));
+  const assets = runSync(create_assets(config));
 
   return dedent`
   if (typeof self === 'undefined' || self instanceof ServiceWorkerGlobalScope === false) {
