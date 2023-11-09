@@ -11,7 +11,6 @@ import * as vite from "vite";
 
 import { compile as compileSvx } from "mdsvex";
 import { compile, preprocess } from "svelte/compiler";
-
 import default_preprocess from "svelte-preprocess";
 
 import * as Effect from "effect/Effect";
@@ -86,6 +85,15 @@ const cwd = process.cwd();
 const s = JSON.stringify;
 
 let build_step: "client" | "server";
+
+const preprocess_ = (
+  source: string,
+  options?: { filename?: string | undefined }
+) => {
+  return Effect.promise(() =>
+    preprocess(source, [svelte_preprocess()], options)
+  );
+};
 
 export async function leanweb(user_config?: Config) {
   let vite_env_: ConfigEnv;
@@ -493,13 +501,7 @@ export async function leanweb(user_config?: Config) {
           );
 
           const preprocessed = yield* $(
-            Effect.tryPromise({
-              try: () =>
-                preprocess(without_vite_client, [svelte_preprocess()], {
-                  filename: id,
-                }),
-              catch: (e) => new CompileError(e as any),
-            })
+            preprocess_(without_vite_client, { filename: id })
           );
 
           const component = yield* $(
@@ -618,9 +620,9 @@ export async function leanweb(user_config?: Config) {
         if (result) code_ = result.code;
       }
 
-      const preprocessed = await preprocess(code_, [svelte_preprocess()], {
-        filename: id,
-      });
+      const preprocessed = await Effect.runPromise(
+        preprocess_(code_, { filename: id })
+      );
 
       const res = compile(preprocessed.code, { generate: "ssr" });
       return res.js;
