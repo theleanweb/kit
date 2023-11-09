@@ -10,8 +10,8 @@ import type {
 import * as vite from "vite";
 
 import { MdsvexCompileOptions, compile as compileSvx } from "mdsvex";
-import { CompileOptions, compile, preprocess } from "svelte/compiler";
 import default_preprocess from "svelte-preprocess";
+import { CompileOptions, compile, preprocess } from "svelte/compiler";
 
 import * as Effect from "effect/Effect";
 import * as Either from "effect/Either";
@@ -38,7 +38,6 @@ import { transform } from "../compiler/html/index.js";
 import { Config, ValidatedConfig } from "../config/schema.js";
 import { BuildData, Env } from "../types/internal.js";
 import { VITE_HTML_PLACEHOLDER } from "../utils/constants.js";
-import { CompileError, HTMLTransformError } from "../utils/error.js";
 import { mkdirp, posixify, rimraf } from "../utils/filesystem.js";
 import { build_service_worker } from "./build/service_worker.js";
 import { dev } from "./dev/index.js";
