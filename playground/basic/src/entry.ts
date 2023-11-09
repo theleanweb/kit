@@ -13,7 +13,7 @@ app.get("/main", (ctx) => view(ctx, "main", {}));
 
 app.get("/home", (ctx) => {
   console.log(getCookie(ctx, "age"));
-  return view(ctx, "home2/home.html", {});
+  return view(ctx, "home/home.html", {});
 });
 
 app.get("/about", (ctx) => view(ctx, "about", {}));

@@ -9,7 +9,7 @@ export default defineConfig({
       adapter: adapter(),
       files: {
         // entry: "src/entry.ts",
-        views: "src/views/page",
+        views: "src/views/pages",
       },
     }),
   ],
