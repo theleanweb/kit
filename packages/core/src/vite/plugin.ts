@@ -75,10 +75,6 @@ class ConfigParseError {
   readonly _tag = "ConfigParseError";
 }
 
-class NoEntryFileError {
-  readonly _tag = "NoEntryFileError";
-}
-
 const html_file_regex = /\.html$/;
 
 const html_postfix_regex = /[?#].*$/s;
@@ -94,7 +90,7 @@ const s = JSON.stringify;
 
 let build_step: "client" | "server";
 
-let manifest: { assets: Asset[]; views: View[] };
+// let manifest: { assets: Asset[]; views: View[] };
 
 export async function leanweb(user_config?: Config) {
   let vite_env_: ConfigEnv;
@@ -324,8 +320,6 @@ export async function leanweb(user_config?: Config) {
           },
         });
 
-        // const service_worker = runSync(service_worker);
-
         const assets_ = await pipe(assets, Fiber.join, runPromise);
 
         const service_worker = await pipe(
@@ -335,7 +329,6 @@ export async function leanweb(user_config?: Config) {
         );
 
         const build_data: BuildData = {
-          // @ts-expect-error
           assets: assets_,
           app_dir: config.appDir,
           app_path: `${config.paths.base.slice(1)}${
@@ -372,7 +365,7 @@ export async function leanweb(user_config?: Config) {
             output_directory,
             config,
             vite_config_,
-            [...manifest.assets, ...files],
+            [...assets_, ...files],
             service_worker.value
           );
         }

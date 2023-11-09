@@ -3,20 +3,26 @@ import Mime from "mime";
 
 import * as Path from "node:path";
 
+import * as Console from "effect/Console";
 import * as Context from "effect/Context";
 import * as Effect from "effect/Effect";
 import { pipe } from "effect/Function";
-import * as Option from "effect/Option";
-import * as Console from "effect/Console";
-import * as List from "effect/ReadonlyArray";
-import * as Logger from "effect/Logger";
 import * as LogLevel from "effect/LogLevel";
+import * as Logger from "effect/Logger";
+import * as Option from "effect/Option";
+import * as List from "effect/ReadonlyArray";
 
 import { PlatformError } from "@effect/platform/Error";
 import * as PlatformFileSystem from "@effect/platform/FileSystem";
 
 import { FileSystem } from "./FileSystem.js";
 import { ValidatedConfig } from "./config/schema.js";
+
+export interface Asset {
+  file: string;
+  size: number;
+  type: string | null;
+}
 
 export const Config = Context.Tag<ValidatedConfig>();
 
@@ -111,7 +117,11 @@ export const Entry = Effect.gen(function* (_) {
         Effect.forEach(files, (file) => {
           return fs.stat(Path.resolve(config.files.assets, file)).pipe(
             Effect.map(({ size }) => {
-              return { file, size, type: Mime.getType(file) };
+              return {
+                file,
+                type: Mime.getType(file),
+                size: parseFloat(size.toString()),
+              } as Asset;
             })
           );
         })
