@@ -158,26 +158,6 @@ export async function leanweb(user_config?: Config) {
     });
   }
 
-  // const parsed_user_config = parse_config(user_config ?? ({} as Config));
-
-  // const resolved_config = pipe(parsed_user_config, Either.map(resolve_config));
-
-  // if (Either.isLeft(resolved_config)) {
-  //   throw resolved_config.left;
-  // }
-
-  // const config = resolved_config.right;
-
-  // const entry = runSync(resolveEntry(config.files.entry));
-
-  // if (Option.isNone(entry)) {
-  //   throw new NoEntryFileError();
-  // }
-
-  // const service_worker_file = resolveEntry(config.files.serviceWorker);
-
-  // const entry_file = entry.value;
-
   const root_output_directory = config.outDir;
   const output_directory = `${root_output_directory}/output`;
 
