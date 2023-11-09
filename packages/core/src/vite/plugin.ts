@@ -10,7 +10,7 @@ import type {
 import * as vite from "vite";
 
 import { compile as compileSvx } from "mdsvex";
-import { compile, preprocess } from "svelte/compiler";
+import { CompileOptions, compile, preprocess } from "svelte/compiler";
 import default_preprocess from "svelte-preprocess";
 
 import * as Effect from "effect/Effect";
@@ -94,6 +94,11 @@ const preprocess_ = (
     preprocess(source, [svelte_preprocess()], options)
   );
 };
+
+const compileTemplate = (
+  source: string,
+  { generate = "ssr", ...options }: CompileOptions = {}
+) => Effect.try(() => compile(source, { ...options, generate }));
 
 export async function leanweb(user_config?: Config) {
   let vite_env_: ConfigEnv;
@@ -505,15 +510,7 @@ export async function leanweb(user_config?: Config) {
           );
 
           const component = yield* $(
-            Effect.try({
-              try: () =>
-                compile(preprocessed.code, {
-                  dev: true,
-                  filename: id,
-                  generate: "ssr",
-                }),
-              catch: (e) => new CompileError(e as any),
-            })
+            compileTemplate(preprocessed.code, { dev: true, filename: id })
           );
 
           yield* $(Effect.log(`compiled ${display_id}`));
@@ -620,12 +617,13 @@ export async function leanweb(user_config?: Config) {
         if (result) code_ = result.code;
       }
 
-      const preprocessed = await Effect.runPromise(
-        preprocess_(code_, { filename: id })
+      const result = await pipe(
+        preprocess_(code_, { filename: id }),
+        Effect.flatMap(({ code }) => compileTemplate(code)),
+        Effect.runPromise
       );
 
-      const res = compile(preprocessed.code, { generate: "ssr" });
-      return res.js;
+      return result.js;
     },
   };
 
