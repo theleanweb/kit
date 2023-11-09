@@ -67,6 +67,11 @@ const SimpleLogger = Logger.make(({ logLevel, message, date }) => {
 
 const CoreFileSystem = FileSystemLive.pipe(Layer.use(NodeFileSystem.layer));
 
+const svelte_preprocess =
+  typeof default_preprocess == "function"
+    ? default_preprocess
+    : default_preprocess.default;
+
 const html_file_regex = /\.html$/;
 
 const html_postfix_regex = /[?#].*$/s;
@@ -490,12 +495,9 @@ export async function leanweb(user_config?: Config) {
           const preprocessed = yield* $(
             Effect.tryPromise({
               try: () =>
-                preprocess(
-                  without_vite_client,
-                  // @ts-expect-error
-                  [default_preprocess()],
-                  { filename: id }
-                ),
+                preprocess(without_vite_client, [svelte_preprocess()], {
+                  filename: id,
+                }),
               catch: (e) => new CompileError(e as any),
             })
           );
@@ -616,8 +618,7 @@ export async function leanweb(user_config?: Config) {
         if (result) code_ = result.code;
       }
 
-      // @ts-expect-error
-      const preprocessed = await preprocess(code_, [default_preprocess()], {
+      const preprocessed = await preprocess(code_, [svelte_preprocess()], {
         filename: id,
       });
 
