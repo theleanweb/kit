@@ -492,9 +492,7 @@ export async function leanweb(user_config?: Config) {
           const trnx_code = yield* $(transform(code, { cwd, filename: id }));
 
           const vite_html = yield* $(
-            Effect.tryPromise(() =>
-              vite_server.transformIndexHtml(id, trnx_code)
-            )
+            Effect.promise(() => vite_server.transformIndexHtml(id, trnx_code))
           );
 
           /** Remove vite client just incase we have a component that has a svelte script with minimal html, cause
