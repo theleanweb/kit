@@ -596,15 +596,12 @@ export async function leanweb(user_config?: Config) {
 
       const clean_id = id.replace(html_postfix_regex, "");
 
-      let code_ = code;
-
-      if (isMarkdown(clean_id)) {
-        const result = await compileSvx(code_);
-        if (result) code_ = result.code;
-      }
-
       const result = await pipe(
-        preprocess_(code_, { filename: id }),
+        Effect.if(isMarkdown(clean_id), {
+          onTrue: compileMarkdown(code).pipe(Effect.map(({ code }) => code)),
+          onFalse: Effect.succeed(code),
+        }),
+        Effect.flatMap((code) => preprocess_(code, { filename: id })),
         Effect.flatMap(({ code }) => compileTemplate(code)),
         Effect.runPromise
       );
