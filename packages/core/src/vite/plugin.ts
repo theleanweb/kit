@@ -489,32 +489,25 @@ export async function leanweb(user_config?: Config) {
             })
           );
 
-          const trnx_code = yield* $(transform(code, { cwd, filename: id }));
-
-          const vite_html = yield* $(
-            Effect.promise(() => vite_server.transformIndexHtml(id, trnx_code))
+          const without_vite_client = yield* $(
+            transform(code, { cwd, filename: id }),
+            Effect.flatMap((code) =>
+              Effect.promise(() => vite_server.transformIndexHtml(id, code))
+            ),
+            /** Remove vite client just incase we have a component that has a svelte script with minimal html, cause
+             * there'll be no head for vite to inject the vite client script. Which means we'll have two script tags
+             * at the beginning of the file, which means the svelte compiler will throw an error
+             **/
+            Effect.map((html) => html.replace(vite_client_regex, () => ""))
           );
 
-          /** Remove vite client just incase we have a component that has a svelte script with minimal html, cause
-           * there'll be no head for vite to inject the vite client script. Which means we'll have two script tags
-           * at the beginning of the file, which means the svelte compiler will throw an error
-           **/
-          const without_vite_client = vite_html.replace(
-            vite_client_regex,
-            () => ""
+          return yield* $(
+            preprocess_(without_vite_client, { filename: id }),
+            Effect.flatMap(({ code }) =>
+              compileTemplate(code, { dev: true, filename: id })
+            ),
+            Effect.tap(() => Effect.log(`compiled ${display_id}`))
           );
-
-          const preprocessed = yield* $(
-            preprocess_(without_vite_client, { filename: id })
-          );
-
-          const component = yield* $(
-            compileTemplate(preprocessed.code, { dev: true, filename: id })
-          );
-
-          yield* $(Effect.log(`compiled ${display_id}`));
-
-          return component;
         });
 
         const result = await runPromise(program);
