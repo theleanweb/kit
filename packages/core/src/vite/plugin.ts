@@ -14,17 +14,16 @@ import { compile, preprocess } from "svelte/compiler";
 
 import default_preprocess from "svelte-preprocess";
 
-import * as Either from "effect/Either";
-import { pipe } from "effect/Function";
-import * as Option from "effect/Option";
 import * as Effect from "effect/Effect";
+import * as Either from "effect/Either";
 import * as Fiber from "effect/Fiber";
+import { pipe } from "effect/Function";
 import * as Layer from "effect/Layer";
-import * as Runtime from "effect/Runtime";
-import * as Logger from "effect/Logger";
 import * as LogLevel from "effect/LogLevel";
-import * as LogSpan from "effect/LogSpan";
+import * as Logger from "effect/Logger";
+import * as Option from "effect/Option";
 import * as List from "effect/ReadonlyArray";
+import * as Runtime from "effect/Runtime";
 
 import * as NodeFileSystem from "@effect/platform-node/FileSystem";
 
@@ -38,13 +37,10 @@ import { dedent } from "ts-dedent";
 import { adapt } from "../adapt/index.js";
 import { transform } from "../compiler/html/index.js";
 import { Config, ValidatedConfig } from "../config/schema.js";
-import * as sync from "../sync/index.js";
-import { create_assets } from "../sync/write_views.js";
-import { Asset, BuildData, Env, View } from "../types/internal.js";
+import { BuildData, Env } from "../types/internal.js";
 import { VITE_HTML_PLACEHOLDER } from "../utils/constants.js";
 import { CompileError, HTMLTransformError } from "../utils/error.js";
 import { mkdirp, posixify, rimraf } from "../utils/filesystem.js";
-import { resolveEntry } from "../utils/utils.js";
 import { build_service_worker } from "./build/service_worker.js";
 import { dev } from "./dev/index.js";
 import { preview } from "./preview/index.js";
@@ -52,9 +48,9 @@ import { get_env } from "./utils/env/load.js";
 import { create_static_module } from "./utils/env/resolve.js";
 import { assets_base, logger } from "./utils/index.js";
 
-import * as Core from "../core.js";
-import * as CoreConfig from "../config.js";
 import { FileSystemLive } from "../FileSystem.js";
+import * as CoreConfig from "../config.js";
+import * as Core from "../core.js";
 
 const logLevelColors = {
   [LogLevel.Error._tag]: colors.red,
