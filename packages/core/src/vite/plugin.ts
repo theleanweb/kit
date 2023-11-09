@@ -67,10 +67,6 @@ const SimpleLogger = Logger.make(({ logLevel, message, date }) => {
 
 const FS = FileSystemLive.pipe(Layer.use(NodeFileSystem.layer));
 
-class ConfigParseError {
-  readonly _tag = "ConfigParseError";
-}
-
 const html_file_regex = /\.html$/;
 
 const html_postfix_regex = /[?#].*$/s;
@@ -692,42 +688,3 @@ function isMarkdown(filename: string) {
   const { name } = path.parse(filename);
   return name.endsWith(".md");
 }
-
-function parse_config(config: Config) {
-  const result = Config.safeParse(config);
-  return result.success
-    ? Either.right(result.data as ValidatedConfig)
-    : Either.left(new ConfigParseError());
-}
-
-function resolve_config(config: ValidatedConfig) {
-  const _config = { ...config };
-
-  _config.outDir = path.join(cwd, config.outDir);
-  _config.files.entry = path.join(cwd, config.files.entry);
-  _config.files.views = path.join(cwd, config.files.views);
-
-  for (const k in config.files) {
-    const key = k as keyof typeof config.files;
-    _config.files[key] = path.resolve(cwd, config.files[key]);
-  }
-
-  return _config;
-}
-
-// function create_service_worker_module(config: ValidatedConfig) {
-//   const assets = runSync(create_assets(config));
-
-//   return dedent`
-//   if (typeof self === 'undefined' || self instanceof ServiceWorkerGlobalScope === false) {
-//     throw new Error('This module can only be imported inside a service worker');
-//   }
-
-//   export const files = [
-//     ${assets
-//       .filter((asset) => config.serviceWorker.files(asset.file))
-//       .map((asset) => `${s(`${config.paths.base}/${asset.file}`)}`)
-//       .join(",\n")}
-//   ];
-// `;
-// }
