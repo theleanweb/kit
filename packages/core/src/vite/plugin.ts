@@ -9,7 +9,7 @@ import type {
 } from "vite";
 import * as vite from "vite";
 
-import { compile as compileSvx } from "mdsvex";
+import { MdsvexCompileOptions, compile as compileSvx } from "mdsvex";
 import { CompileOptions, compile, preprocess } from "svelte/compiler";
 import default_preprocess from "svelte-preprocess";
 
@@ -99,6 +99,11 @@ const compileTemplate = (
   source: string,
   { generate = "ssr", ...options }: CompileOptions = {}
 ) => Effect.try(() => compile(source, { ...options, generate }));
+
+const compileMarkdown = (source: string, options?: MdsvexCompileOptions) =>
+  Effect.promise(() => compileSvx(source, options)).pipe(
+    Effect.flatMap(Option.fromNullable)
+  );
 
 export async function leanweb(user_config?: Config) {
   let vite_env_: ConfigEnv;
@@ -472,28 +477,24 @@ export async function leanweb(user_config?: Config) {
           yield* $(Effect.log(`compiling ${display_id}`));
 
           const code = yield* $(
-            isMarkdown(id)
-              ? pipe(
-                  Effect.tryPromise({
-                    try: () => compileSvx(html),
-                    catch: (e) => new CompileError(e as any),
-                  }),
-                  Effect.flatMap(Option.fromNullable),
-                  Effect.map((_) => _.code),
-                  Effect.catchTag("NoSuchElementException", () =>
-                    Effect.succeed(html)
-                  )
+            Effect.if(isMarkdown(id), {
+              onFalse: Effect.succeed(html),
+              onTrue: pipe(
+                compileMarkdown(html),
+                Effect.map((_) => _.code),
+                Effect.catchTag("NoSuchElementException", () =>
+                  Effect.succeed(html)
                 )
-              : Effect.succeed(html)
+              ),
+            })
           );
 
           const trnx_code = yield* $(transform(code, { cwd, filename: id }));
 
           const vite_html = yield* $(
-            Effect.tryPromise({
-              try: () => vite_server.transformIndexHtml(id, trnx_code),
-              catch: (e) => new HTMLTransformError(e as any),
-            })
+            Effect.tryPromise(() =>
+              vite_server.transformIndexHtml(id, trnx_code)
+            )
           );
 
           /** Remove vite client just incase we have a component that has a svelte script with minimal html, cause
