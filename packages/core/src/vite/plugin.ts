@@ -584,9 +584,7 @@ export async function leanweb(user_config?: Config) {
 
         // The generated svelte component imports svelte internals, which means we'll not be able
         // to resolve it from the src directory. And should also take care of any node_modules import
-        if (fs.existsSync(resolved)) {
-          return resolved;
-        }
+        if (fs.existsSync(resolved)) return resolved;
       }
     },
     load(id) {
