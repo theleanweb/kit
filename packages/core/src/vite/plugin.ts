@@ -472,9 +472,9 @@ export async function leanweb(user_config?: Config) {
 
       if (html_file_regex.test(id)) {
         const program = Effect.gen(function* ($) {
-          const display_id = id.replace(cwd, "");
+          const file = id.replace(cwd, "");
 
-          yield* $(Effect.log(`compiling ${display_id}`));
+          yield* $(Effect.log(`compiling ${file}`));
 
           const code = yield* $(
             Effect.if(isMarkdown(id), {
@@ -506,7 +506,7 @@ export async function leanweb(user_config?: Config) {
             Effect.flatMap(({ code }) =>
               compileTemplate(code, { dev: true, filename: id })
             ),
-            Effect.tap(() => Effect.log(`compiled ${display_id}`))
+            Effect.tap(() => Effect.log(`compiled ${file}`))
           );
         });
 
