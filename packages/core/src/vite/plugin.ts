@@ -481,7 +481,7 @@ export async function leanweb(user_config?: Config) {
               onFalse: Effect.succeed(html),
               onTrue: pipe(
                 compileMarkdown(html),
-                Effect.map((_) => _.code),
+                Effect.map(({ code }) => code),
                 Effect.catchTag("NoSuchElementException", () =>
                   Effect.succeed(html)
                 )
