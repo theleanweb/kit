@@ -8,7 +8,8 @@ export default defineConfig({
     leanweb({
       adapter: adapter(),
       files: {
-        views: "src/views/pages",
+        // entry: "src/entry.ts",
+        views: "src/views/page",
       },
     }),
   ],

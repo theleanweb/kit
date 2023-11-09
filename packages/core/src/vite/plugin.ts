@@ -16,13 +16,17 @@ import default_preprocess from "svelte-preprocess";
 
 import * as Either from "effect/Either";
 import { pipe } from "effect/Function";
-import * as O from "effect/Option";
+import * as Option from "effect/Option";
 import * as Effect from "effect/Effect";
-import * as Runtime from "effect/Runtime";
+import * as Fiber from "effect/Fiber";
 import * as Layer from "effect/Layer";
+import * as Runtime from "effect/Runtime";
 import * as Logger from "effect/Logger";
 import * as LogLevel from "effect/LogLevel";
 import * as LogSpan from "effect/LogSpan";
+import * as List from "effect/ReadonlyArray";
+
+import * as NodeFileSystem from "@effect/platform-node/FileSystem";
 
 import * as fs from "node:fs";
 import * as path from "node:path";
@@ -48,11 +52,16 @@ import { get_env } from "./utils/env/load.js";
 import { create_static_module } from "./utils/env/resolve.js";
 import { assets_base, logger } from "./utils/index.js";
 
+import * as Core from "../core.js";
+import * as CoreConfig from "../config.js";
+import { FileSystemLive } from "../FileSystem.js";
+
 const logLevelColors = {
   [LogLevel.Error._tag]: colors.red,
   [LogLevel.Info._tag]: colors.gray,
   [LogLevel.Fatal._tag]: colors.red,
   [LogLevel.Debug._tag]: colors.yellow,
+  [LogLevel.Warning._tag]: colors.yellow,
 };
 
 const SimpleLogger = Logger.make(({ logLevel, message, date }) => {
@@ -60,13 +69,7 @@ const SimpleLogger = Logger.make(({ logLevel, message, date }) => {
   console.log(`${color(`${logLevel.label}`)} ${message}`);
 });
 
-const layer = Logger.replace(Logger.defaultLogger, SimpleLogger);
-
-const runtime = Layer.toRuntime(layer).pipe(Effect.scoped, Effect.runSync);
-
-const runFork = Runtime.runFork(runtime);
-const runSync = Runtime.runSync(runtime);
-const runPromise = Runtime.runPromise(runtime);
+const FS = FileSystemLive.pipe(Layer.use(NodeFileSystem.layer));
 
 class ConfigParseError {
   readonly _tag = "ConfigParseError";
@@ -103,25 +106,77 @@ export async function leanweb(user_config?: Config) {
 
   let finalize: () => Promise<void>;
 
-  const parsed_user_config = parse_config(user_config ?? ({} as Config));
+  const conf = CoreConfig.prepare(user_config, { cwd });
 
-  const resolved_config = pipe(parsed_user_config, Either.map(resolve_config));
-
-  if (Either.isLeft(resolved_config)) {
-    throw resolved_config.left;
+  if (Either.isLeft(conf)) {
+    console.log(colors.red("Invalid config"));
+    process.exit(1);
   }
 
-  const config = resolved_config.right;
+  const config = conf.right;
 
-  const entry = runSync(resolveEntry(config.files.entry));
+  const coreConfig = Layer.succeed(Core.Config, config);
 
-  if (O.isNone(entry)) {
-    throw new NoEntryFileError();
+  const layer = Layer.mergeAll(
+    Logger.replace(Logger.defaultLogger, SimpleLogger),
+    NodeFileSystem.layer,
+    FS,
+    coreConfig
+  );
+
+  const runtime = Layer.toRuntime(layer).pipe(Effect.scoped, Effect.runSync);
+
+  const runFork = Runtime.runFork(runtime);
+  const runSync = Runtime.runSync(runtime);
+  const runPromise = Runtime.runPromise(runtime);
+
+  const core = await runPromise(Core.Entry);
+
+  const views = runFork(core.views);
+  const assets = runFork(core.assets);
+  const serverEntry = runFork(core.server);
+  const serviceWorker = runFork(core.serviceWorker);
+
+  function create_service_worker_module(config: ValidatedConfig) {
+    return Effect.gen(function* (_) {
+      const files = yield* _(Fiber.join(assets));
+
+      return dedent`
+      if (typeof self === 'undefined' || self instanceof ServiceWorkerGlobalScope === false) {
+        throw new Error('This module can only be imported inside a service worker');
+      }
+      
+      export const files = [
+        ${pipe(
+          files,
+          List.filter((asset) => config.serviceWorker.files(asset.file)),
+          List.map((asset) => `${s(`${config.paths.base}/${asset.file}`)}`),
+          List.join(",\n")
+        )}
+      ];
+      `;
+    });
   }
 
-  const service_worker_file = resolveEntry(config.files.serviceWorker);
+  // const parsed_user_config = parse_config(user_config ?? ({} as Config));
 
-  const entry_file = entry.value;
+  // const resolved_config = pipe(parsed_user_config, Either.map(resolve_config));
+
+  // if (Either.isLeft(resolved_config)) {
+  //   throw resolved_config.left;
+  // }
+
+  // const config = resolved_config.right;
+
+  // const entry = runSync(resolveEntry(config.files.entry));
+
+  // if (Option.isNone(entry)) {
+  //   throw new NoEntryFileError();
+  // }
+
+  // const service_worker_file = resolveEntry(config.files.serviceWorker);
+
+  // const entry_file = entry.value;
 
   const root_output_directory = config.outDir;
   const output_directory = `${root_output_directory}/output`;
@@ -159,10 +214,12 @@ export async function leanweb(user_config?: Config) {
       let input: InputOption;
 
       if (is_build && build_step !== "server") {
-        manifest = sync.all(config, vite_config_env.mode);
-        input = manifest.views.map((view) => view.file);
+        const files = await pipe(views, Fiber.join, runPromise);
+        input = files.map((file) => file.file);
       } else {
-        input = { index: entry_file, internal: `${generated}/internal.js` };
+        const entry = await pipe(serverEntry, Fiber.join, runPromise);
+        if (Option.isNone(entry)) process.exit(1);
+        input = { index: entry.value, internal: `${generated}/internal.js` };
       }
 
       const ssr = build_step === "server";
@@ -271,15 +328,6 @@ export async function leanweb(user_config?: Config) {
         const verbose = vite_config_.logLevel === "info";
         const log = logger({ verbose });
 
-        const build_data: BuildData = {
-          app_dir: config.appDir,
-          assets: manifest.assets,
-          app_path: `${config.paths.base.slice(1)}${
-            config.paths.base ? "/" : ""
-          }${config.appDir}`,
-          service_worker: service_worker_file ? "service-worker.js" : null,
-        };
-
         // Initiate second build step that builds the final server output
         await vite.build({
           mode: vite_env_.mode,
@@ -296,9 +344,29 @@ export async function leanweb(user_config?: Config) {
           },
         });
 
-        const service_worker = runSync(service_worker_file);
+        // const service_worker = runSync(service_worker);
 
-        if (O.isSome(service_worker)) {
+        const assets_ = await pipe(assets, Fiber.join, runPromise);
+
+        const service_worker = await pipe(
+          serviceWorker,
+          Fiber.join,
+          runPromise
+        );
+
+        const build_data: BuildData = {
+          // @ts-expect-error
+          assets: assets_,
+          app_dir: config.appDir,
+          app_path: `${config.paths.base.slice(1)}${
+            config.paths.base ? "/" : ""
+          }${config.appDir}`,
+          service_worker: Option.isSome(service_worker)
+            ? "service-worker.js"
+            : null,
+        };
+
+        if (Option.isSome(service_worker)) {
           if (config.paths.assets) {
             throw new Error(
               "Cannot use service worker alongside config.paths.assets"
@@ -332,19 +400,10 @@ export async function leanweb(user_config?: Config) {
         // we need to defer this to closeBundle, so that adapters copy files
         // created by other Vite plugins
         finalize = async () => {
-          console.log(
-            `\nRun ${colors
-              .bold()
-              .cyan(
-                "npm run preview"
-              )} to preview your production build locally.`
-          );
+          const cmd = colors.bold().cyan("npm run preview");
+          console.log(`\nRun ${cmd} to preview your production build locally.`);
 
-          if (Either.isRight(parsed_user_config)) {
-            rimraf(
-              `${views_out_directory}/${parsed_user_config.right.files.views}`
-            );
-          }
+          rimraf(`${views_out_directory}/${config.files.views}`);
 
           if (config.adapter) {
             await adapt(config, build_data, log);
@@ -383,7 +442,7 @@ export async function leanweb(user_config?: Config) {
           return create_static_module("$env/static/public", cwd_env.public);
 
         case "\0$service-worker":
-          return create_service_worker_module(config);
+          return runPromise(create_service_worker_module(config));
       }
     },
   };
@@ -438,7 +497,7 @@ export async function leanweb(user_config?: Config) {
                     try: () => compileSvx(html),
                     catch: (e) => new CompileError(e as any),
                   }),
-                  Effect.flatMap(O.fromNullable),
+                  Effect.flatMap(Option.fromNullable),
                   Effect.map((_) => _.code),
                   Effect.catchTag("NoSuchElementException", () =>
                     Effect.succeed(html)
@@ -687,19 +746,19 @@ function resolve_config(config: ValidatedConfig) {
   return _config;
 }
 
-function create_service_worker_module(config: ValidatedConfig) {
-  const assets = runSync(create_assets(config));
+// function create_service_worker_module(config: ValidatedConfig) {
+//   const assets = runSync(create_assets(config));
 
-  return dedent`
-  if (typeof self === 'undefined' || self instanceof ServiceWorkerGlobalScope === false) {
-    throw new Error('This module can only be imported inside a service worker');
-  }
-  
-  export const files = [
-    ${assets
-      .filter((asset) => config.serviceWorker.files(asset.file))
-      .map((asset) => `${s(`${config.paths.base}/${asset.file}`)}`)
-      .join(",\n")}
-  ];
-`;
-}
+//   return dedent`
+//   if (typeof self === 'undefined' || self instanceof ServiceWorkerGlobalScope === false) {
+//     throw new Error('This module can only be imported inside a service worker');
+//   }
+
+//   export const files = [
+//     ${assets
+//       .filter((asset) => config.serviceWorker.files(asset.file))
+//       .map((asset) => `${s(`${config.paths.base}/${asset.file}`)}`)
+//       .join(",\n")}
+//   ];
+// `;
+// }
