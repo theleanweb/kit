@@ -180,6 +180,7 @@ export async function leanweb(user_config?: Config) {
 
       return {
         root: cwd,
+        appType: "custom",
         publicDir: config.files.assets,
         base: !ssr ? assets_base(config) : "./",
         ssr: {
