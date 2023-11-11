@@ -104,6 +104,22 @@ const s = JSON.stringify;
 
 let build_step: "client" | "server";
 
+let views: Effect.Effect.Success<
+  Effect.Effect.Success<typeof Core.Entry>["views"]
+>;
+
+let assets: Effect.Effect.Success<
+  Effect.Effect.Success<typeof Core.Entry>["assets"]
+>;
+
+let serverEntry: Effect.Effect.Success<
+  Effect.Effect.Success<typeof Core.Entry>["server"]
+>;
+
+let serviceWorker: Effect.Effect.Success<
+  Effect.Effect.Success<typeof Core.Entry>["serviceWorker"]
+>;
+
 export async function leanweb(user_config?: Config) {
   let vite_env_: ConfigEnv;
   let vite_server: ViteDevServer;
@@ -141,9 +157,9 @@ export async function leanweb(user_config?: Config) {
 
   const core = await runPromise(Core.Entry);
 
-  const views = runFork(core.views);
+  // const views = runFork(core.views);
   const assets = runFork(core.assets);
-  const serverEntry = runFork(core.server);
+  // const serverEntry = runFork(core.server);
   const serviceWorker = runFork(core.serviceWorker);
 
   function create_service_worker_module(config: ValidatedConfig) {
@@ -203,12 +219,41 @@ export async function leanweb(user_config?: Config) {
       let input: InputOption;
 
       if (is_build && build_step !== "server") {
-        const files = await pipe(views, Fiber.join, runPromise);
-        input = files.map((file) => file.file);
+        views = await pipe(core.views, runPromise);
+        input = views.map((file) => file.file);
       } else {
-        const entry = await pipe(serverEntry, Fiber.join, runPromise);
-        if (Option.isNone(entry)) process.exit(1);
-        input = { index: entry.value, internal: `${generated}/internal.js` };
+        serverEntry = await pipe(core.server, runPromise);
+
+        if (Option.isNone(serverEntry)) {
+          const entry = user_config?.files?.entry;
+
+          if (entry) {
+            console.log(
+              colors.red(
+                `Couldn't find the entry point specified in the configuration: ${colors.bold(
+                  entry
+                )}`
+              )
+            );
+          } else {
+            console.log(
+              colors.yellow(
+                "No server entry point specified, and could not find the default entry point (src/entry.{js,ts,mjs,mts})"
+              )
+            );
+          }
+
+          console.log(
+            colors.yellow("Please provide a entry point to your server")
+          );
+
+          process.exit(1);
+        }
+
+        input = {
+          index: serverEntry.value,
+          internal: `${generated}/internal.js`,
+        };
       }
 
       const ssr = build_step === "server";
