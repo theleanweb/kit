@@ -109,6 +109,8 @@ function create_service_worker_module(
   `;
 }
 
+const s = JSON.stringify;
+
 const html_file_regex = /\.html$/;
 
 const html_postfix_regex = /[?#].*$/s;
@@ -119,8 +121,6 @@ const vite_client_regex =
   /<script type="module" src="\/@vite\/client"><\/script>/g;
 
 const cwd = process.cwd();
-
-const s = JSON.stringify;
 
 let build_step: "client" | "server";
 
@@ -134,10 +134,6 @@ let assets: Effect.Effect.Success<
 
 let serverEntry: Effect.Effect.Success<
   Effect.Effect.Success<typeof Core.Entry>["server"]
->;
-
-let serviceWorker: Effect.Effect.Success<
-  Effect.Effect.Success<typeof Core.Entry>["serviceWorker"]
 >;
 
 export async function leanweb(user_config?: Config) {
