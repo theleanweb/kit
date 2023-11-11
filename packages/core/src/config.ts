@@ -3,6 +3,7 @@ import * as Path from "node:path";
 import * as Either from "effect/Either";
 import { pipe } from "effect/Function";
 import { Config, ValidatedConfig } from "./config/schema.js";
+import { ZodError } from "zod";
 
 interface Options {
   readonly cwd: string;
@@ -10,6 +11,7 @@ interface Options {
 
 class ConfigParseError {
   readonly _tag = "ConfigParseError";
+  constructor(readonly cause: ZodError<Config>) {}
 }
 
 function parse(
@@ -18,7 +20,7 @@ function parse(
   const result = Config.safeParse(config);
   return result.success
     ? Either.right(result.data as ValidatedConfig)
-    : Either.left(new ConfigParseError());
+    : Either.left(new ConfigParseError(result.error));
 }
 
 function resolve(config: ValidatedConfig, { cwd }: Options) {

@@ -118,6 +118,7 @@ export async function leanweb(user_config?: Config) {
 
   if (Either.isLeft(conf)) {
     console.log(colors.red("Invalid config"));
+    console.log(colors.red(String(conf.left.cause.stack)));
     process.exit(1);
   }
 
