@@ -89,6 +89,26 @@ const compileMarkdown = (source: string, options?: MdsvexCompileOptions) =>
     Effect.flatMap(Option.fromNullable)
   );
 
+function create_service_worker_module(
+  config: ValidatedConfig,
+  assets: Array<Core.Asset>
+) {
+  return dedent`
+  if (typeof self === 'undefined' || self instanceof ServiceWorkerGlobalScope === false) {
+    throw new Error('This module can only be imported inside a service worker');
+  }
+  
+  export const files = [
+    ${pipe(
+      assets,
+      List.filter((asset) => config.serviceWorker.files(asset.file)),
+      List.map((asset) => `${s(`${config.paths.base}/${asset.file}`)}`),
+      List.join(",\n")
+    )}
+  ];
+  `;
+}
+
 const html_file_regex = /\.html$/;
 
 const html_postfix_regex = /[?#].*$/s;
@@ -110,7 +130,7 @@ let views: Effect.Effect.Success<
 
 let assets: Effect.Effect.Success<
   Effect.Effect.Success<typeof Core.Entry>["assets"]
->;
+> | null = null;
 
 let serverEntry: Effect.Effect.Success<
   Effect.Effect.Success<typeof Core.Entry>["server"]
@@ -158,30 +178,9 @@ export async function leanweb(user_config?: Config) {
   const core = await runPromise(Core.Entry);
 
   // const views = runFork(core.views);
-  const assets = runFork(core.assets);
+  // const assets = runFork(core.assets);
   // const serverEntry = runFork(core.server);
   const serviceWorker = runFork(core.serviceWorker);
-
-  function create_service_worker_module(config: ValidatedConfig) {
-    return Effect.gen(function* (_) {
-      const files = yield* _(Fiber.join(assets));
-
-      return dedent`
-      if (typeof self === 'undefined' || self instanceof ServiceWorkerGlobalScope === false) {
-        throw new Error('This module can only be imported inside a service worker');
-      }
-      
-      export const files = [
-        ${pipe(
-          files,
-          List.filter((asset) => config.serviceWorker.files(asset.file)),
-          List.map((asset) => `${s(`${config.paths.base}/${asset.file}`)}`),
-          List.join(",\n")
-        )}
-      ];
-      `;
-    });
-  }
 
   const root_output_directory = config.outDir;
   const output_directory = `${root_output_directory}/output`;
@@ -378,7 +377,7 @@ export async function leanweb(user_config?: Config) {
           },
         });
 
-        const assets_ = await pipe(assets, Fiber.join, runPromise);
+        assets = await pipe(core.assets, runPromise);
 
         const service_worker = await pipe(
           serviceWorker,
@@ -387,7 +386,7 @@ export async function leanweb(user_config?: Config) {
         );
 
         const build_data: BuildData = {
-          assets: assets_,
+          assets,
           app_dir: config.appDir,
           app_path: `${config.paths.base.slice(1)}${
             config.paths.base ? "/" : ""
@@ -423,7 +422,7 @@ export async function leanweb(user_config?: Config) {
             output_directory,
             config,
             vite_config_,
-            [...assets_, ...files],
+            [...assets, ...files],
             service_worker.value
           );
         }
@@ -473,7 +472,11 @@ export async function leanweb(user_config?: Config) {
           return create_static_module("$env/static/public", cwd_env.public);
 
         case "\0$service-worker":
-          return runPromise(create_service_worker_module(config));
+          return pipe(
+            assets ? Effect.succeed(assets) : core.assets,
+            Effect.map((_) => create_service_worker_module(config, _)),
+            Effect.runPromise
+          );
       }
     },
   };
