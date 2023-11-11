@@ -70,21 +70,6 @@ const svelte_preprocess =
     ? default_preprocess
     : default_preprocess.default;
 
-const html_file_regex = /\.html$/;
-
-const html_postfix_regex = /[?#].*$/s;
-
-const html_postfix = "?html-import";
-
-const vite_client_regex =
-  /<script type="module" src="\/@vite\/client"><\/script>/g;
-
-const cwd = process.cwd();
-
-const s = JSON.stringify;
-
-let build_step: "client" | "server";
-
 const preprocess_ = (
   source: string,
   options?: { filename?: string | undefined }
@@ -103,6 +88,21 @@ const compileMarkdown = (source: string, options?: MdsvexCompileOptions) =>
   Effect.promise(() => compileSvx(source, options)).pipe(
     Effect.flatMap(Option.fromNullable)
   );
+
+const html_file_regex = /\.html$/;
+
+const html_postfix_regex = /[?#].*$/s;
+
+const html_postfix = "?html-import";
+
+const vite_client_regex =
+  /<script type="module" src="\/@vite\/client"><\/script>/g;
+
+const cwd = process.cwd();
+
+const s = JSON.stringify;
+
+let build_step: "client" | "server";
 
 export async function leanweb(user_config?: Config) {
   let vite_env_: ConfigEnv;
