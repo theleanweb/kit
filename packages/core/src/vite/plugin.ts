@@ -146,15 +146,15 @@ export async function leanweb(user_config?: Config) {
 
   let finalize: () => Promise<void>;
 
-  const conf = CoreConfig.prepare(user_config, { cwd });
+  const config_ = CoreConfig.prepare(user_config, { cwd });
 
-  if (Either.isLeft(conf)) {
+  if (Either.isLeft(config_)) {
     console.log(colors.red("Invalid config"));
-    console.log(colors.red(String(conf.left.cause.stack)));
+    console.log(colors.red(String(config_.left.cause.stack)));
     process.exit(1);
   }
 
-  const config = conf.right;
+  const config = config_.right;
 
   const coreConfig = Layer.succeed(Core.Config, config);
 
