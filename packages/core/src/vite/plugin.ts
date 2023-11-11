@@ -214,7 +214,7 @@ export async function leanweb(user_config?: Config) {
       let input: InputOption;
 
       if (is_build && build_step !== "server") {
-        views = await pipe(core.views, runPromise);
+        views = await runPromise(core.views);
         input = views.map((file) => file.file);
       } else {
         serverEntry = await pipe(core.server, runPromise);
