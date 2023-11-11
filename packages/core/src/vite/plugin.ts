@@ -180,7 +180,7 @@ export async function leanweb(user_config?: Config) {
   // const views = runFork(core.views);
   // const assets = runFork(core.assets);
   // const serverEntry = runFork(core.server);
-  const serviceWorker = runFork(core.serviceWorker);
+  // const serviceWorker = runFork(core.serviceWorker);
 
   const root_output_directory = config.outDir;
   const output_directory = `${root_output_directory}/output`;
@@ -377,13 +377,11 @@ export async function leanweb(user_config?: Config) {
           },
         });
 
-        assets = await pipe(core.assets, runPromise);
-
-        const service_worker = await pipe(
-          serviceWorker,
-          Fiber.join,
-          runPromise
+        const [assets_, service_worker] = await runPromise(
+          Effect.all([core.assets, core.serviceWorker])
         );
+
+        assets = assets_;
 
         const build_data: BuildData = {
           assets,
