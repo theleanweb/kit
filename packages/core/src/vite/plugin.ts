@@ -10,12 +10,11 @@ import type {
 import * as vite from "vite";
 
 import { MdsvexCompileOptions, compile as compileSvx } from "mdsvex";
-import default_preprocess from "svelte-preprocess";
+import svelte_preprocess from "svelte-preprocess";
 import { CompileOptions, compile, preprocess } from "svelte/compiler";
 
 import * as Effect from "effect/Effect";
 import * as Either from "effect/Either";
-import * as Fiber from "effect/Fiber";
 import { pipe } from "effect/Function";
 import * as Layer from "effect/Layer";
 import * as LogLevel from "effect/LogLevel";
@@ -47,28 +46,10 @@ import { create_static_module } from "./utils/env/resolve.js";
 import { assets_base, logger } from "./utils/index.js";
 
 import { FileSystemLive } from "../FileSystem.js";
+import * as Generated from "../Generated/index.js";
 import * as CoreConfig from "../config.js";
 import * as Core from "../core.js";
-
-const logLevelColors = {
-  [LogLevel.Error._tag]: colors.red,
-  [LogLevel.Info._tag]: colors.gray,
-  [LogLevel.Fatal._tag]: colors.red,
-  [LogLevel.Debug._tag]: colors.yellow,
-  [LogLevel.Warning._tag]: colors.yellow,
-};
-
-const SimpleLogger = Logger.make(({ logLevel, message, date }) => {
-  const color = logLevelColors[logLevel._tag];
-  console.log(`${color(`${logLevel.label}`)} ${message}`);
-});
-
-const CoreFileSystem = FileSystemLive.pipe(Layer.use(NodeFileSystem.layer));
-
-const svelte_preprocess =
-  typeof default_preprocess == "function"
-    ? default_preprocess
-    : default_preprocess.default;
+import { Logger as SimpleLogger } from "../Logger.js";
 
 const preprocess_ = (
   source: string,
@@ -136,6 +117,8 @@ let serverEntry: Effect.Effect.Success<
   Effect.Effect.Success<typeof Core.Entry>["server"]
 >;
 
+const CoreFileSystem = FileSystemLive.pipe(Layer.use(NodeFileSystem.layer));
+
 export async function leanweb(user_config?: Config) {
   let vite_env_: ConfigEnv;
   let vite_server: ViteDevServer;
@@ -156,13 +139,11 @@ export async function leanweb(user_config?: Config) {
 
   const config = config_.right;
 
-  const coreConfig = Layer.succeed(Core.Config, config);
-
   const layer = Layer.mergeAll(
     Logger.replace(Logger.defaultLogger, SimpleLogger),
+    Layer.succeed(Core.Config, config),
     NodeFileSystem.layer,
-    CoreFileSystem,
-    coreConfig
+    CoreFileSystem
   );
 
   const runtime = Layer.toRuntime(layer).pipe(Effect.scoped, Effect.runSync);
@@ -172,11 +153,6 @@ export async function leanweb(user_config?: Config) {
   const runPromise = Runtime.runPromise(runtime);
 
   const core = await runPromise(Core.Entry);
-
-  // const views = runFork(core.views);
-  // const assets = runFork(core.assets);
-  // const serverEntry = runFork(core.server);
-  // const serviceWorker = runFork(core.serviceWorker);
 
   const root_output_directory = config.outDir;
   const output_directory = `${root_output_directory}/output`;
@@ -198,6 +174,7 @@ export async function leanweb(user_config?: Config) {
     },
     configureServer(server) {
       vite_server = server;
+      console.log("vite:config:server");
       return dev(server, vite_config_, config);
     },
     configurePreviewServer(vite) {
@@ -215,6 +192,17 @@ export async function leanweb(user_config?: Config) {
 
       if (is_build && build_step !== "server") {
         views = await runPromise(core.views);
+
+        await runPromise(
+          Effect.all([
+            Generated.writeTSConfig(config.outDir, config, cwd),
+            Generated.writeEnv(config.outDir, config.env, vite_config_env.mode),
+            Generated.writeInternal(generated),
+            Generated.writeConfig(config, generated),
+            Generated.writeViews(generated, views),
+          ])
+        );
+
         input = views.map((file) => file.file);
       } else {
         serverEntry = await pipe(core.server, runPromise);

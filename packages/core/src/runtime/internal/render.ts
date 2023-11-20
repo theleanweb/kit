@@ -8,7 +8,7 @@ import * as Effect from "effect/Effect";
 import { pipe } from "effect/Function";
 import { NoSuchElementException } from "effect/Cause";
 
-import { options } from "__GENERATED__/config.js";
+import options from "__GENERATED__/config.js";
 import { views } from "__GENERATED__/views.js";
 
 import { SSRComponent } from "../../types/internal.js";

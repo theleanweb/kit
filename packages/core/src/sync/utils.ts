@@ -1,5 +1,10 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
+
+import * as Effect from "effect/Effect";
+import * as Option from "effect/Option";
+import { pipe } from "effect/Function";
+
 import { mkdirp } from "../utils/filesystem.js";
 
 const previous_contents = new Map<string, string>();

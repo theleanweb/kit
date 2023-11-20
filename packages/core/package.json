@@ -27,7 +27,7 @@
     "@types/connect": "^3.4.35",
     "@types/cookie": "^0.5.2",
     "@types/mime": "^3.0.1",
-    "@types/node": "^20.4.2",
+    "@types/node": "^20.5.1",
     "@types/set-cookie-parser": "^2.4.3",
     "connect": "^3.7.0",
     "hono": "^3.9.2",

@@ -14,7 +14,24 @@ import sirv from "sirv";
 import { Hono } from "hono";
 
 import * as O from "effect/Option";
+import * as Exit from "effect/Exit";
+import * as Either from "effect/Either";
 import * as Effect from "effect/Effect";
+import * as Runtime from "effect/Runtime";
+import * as FiberRefs from "effect/FiberRefs";
+import * as RuntimeFlags from "effect/RuntimeFlags";
+import { pipe } from "effect/Function";
+import * as Layer from "effect/Layer";
+import * as Logger from "effect/Logger";
+import * as LogLevel from "effect/LogLevel";
+
+import * as NodeFileSystem from "@effect/platform-node/FileSystem";
+
+import { FileSystemLive } from "../../FileSystem.js";
+import * as Generated from "../../Generated/index.js";
+import * as CoreConfig from "../../config.js";
+import * as Core from "../../core.js";
+import { Logger as SimpleLogger } from "../../Logger.js";
 
 import { ValidatedConfig } from "../../config/schema.js";
 import { getRequest, setResponse } from "../../node/index.js";
@@ -39,6 +56,8 @@ function is_css_request(url: string) {
   return css_file_regex.test(url);
 }
 
+const CoreFileSystem = FileSystemLive.pipe(Layer.use(NodeFileSystem.layer));
+
 export async function dev(
   vite: ViteDevServer,
   vite_config: ResolvedConfig,
@@ -48,7 +67,39 @@ export async function dev(
     installPolyfills();
   }
 
-  sync.init(config, vite_config.mode);
+  const layer = Layer.mergeAll(
+    Logger.replace(Logger.defaultLogger, SimpleLogger),
+    Layer.succeed(Core.Config, config),
+    NodeFileSystem.layer,
+    CoreFileSystem
+  );
+
+  const runtime = await Layer.toRuntime(layer).pipe(
+    Effect.scoped,
+    Effect.runPromise
+  );
+
+  const runFork = Runtime.runFork(runtime);
+  const runSync = Runtime.runSync(runtime);
+  const runPromise = Runtime.runPromise(runtime);
+
+  const core = await runPromise(Core.Entry);
+
+  // sync.init(config, vite_config.mode);
+
+  const generated = `${config.outDir}/generated`;
+
+  runFork(
+    Effect.all([
+      Generated.writeTSConfig(config.outDir, config, cwd),
+      // Generated.writeEnv(config.outDir, config.env, vite_config.mode),
+      Generated.writeInternal(generated),
+      // Generated.writeConfig(config, generated),
+      // Effect.flatMap(core.views, (views) =>
+      //   Generated.writeViews(generated, views)
+      // ),
+    ])
+  );
 
   async function loud_ssr_load_module(url: string) {
     try {
@@ -90,18 +141,20 @@ export async function dev(
   }
 
   function update() {
-    try {
-      sync.create(config);
-    } catch (error: any) {
-      console.error(color.bold().red(error.message));
-
-      vite.ws.send({
-        type: "error",
-        err: { message: error.message, stack: "" },
-      });
-
-      return;
-    }
+    Effect.all([
+      Generated.writeEnv(config.outDir, config.env, vite_config.mode),
+      Generated.writeConfig(config, generated),
+      Effect.flatMap(core.views, (views) =>
+        Generated.writeViews(generated, views)
+      ),
+    ]).pipe(
+      Effect.catchAll((error) => {
+        const message = error.message;
+        vite.ws.send({ type: "error", err: { message, stack: "" } });
+        return Effect.logError(color.bold().red(message));
+      }),
+      runFork
+    );
   }
 
   function fix_stack_trace(stack: string) {
@@ -204,7 +257,8 @@ export async function dev(
           req.headers[":authority"] || req.headers.host
         }`;
 
-        const decoded = decodeURI(new URL(base + req.url).pathname);
+        const url = new URL(base + req.url);
+        const decoded = decodeURI(url.pathname);
 
         if (!decoded.startsWith(config.paths.base)) {
           res.statusCode = 404;
@@ -218,12 +272,10 @@ export async function dev(
           return;
         }
 
-        const url = new URL(base + req.url);
+        // const url = new URL(base + req.url);
 
         if (decoded === config.paths.base + "/service-worker.js") {
-          const resolved = Effect.runSync(
-            resolveEntry(config.files.serviceWorker)
-          );
+          const resolved = await runPromise(core.serviceWorker);
 
           if (O.isSome(resolved)) {
             res.writeHead(200, { "content-type": "application/javascript" });
