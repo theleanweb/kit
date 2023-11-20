@@ -17,7 +17,6 @@ import * as Effect from "effect/Effect";
 import * as Either from "effect/Either";
 import { pipe } from "effect/Function";
 import * as Layer from "effect/Layer";
-import * as LogLevel from "effect/LogLevel";
 import * as Logger from "effect/Logger";
 import * as Option from "effect/Option";
 import * as List from "effect/ReadonlyArray";
@@ -32,24 +31,27 @@ import colors from "kleur";
 import mime from "mime";
 import { dedent } from "ts-dedent";
 
-import { adapt } from "../adapt/index.js";
-import { transform } from "../compiler/html/index.js";
 import { Config, ValidatedConfig } from "../config/schema.js";
 import { BuildData, Env } from "../types/internal.js";
-import { VITE_HTML_PLACEHOLDER } from "../utils/constants.js";
 import { mkdirp, posixify, rimraf } from "../utils/filesystem.js";
 import { build_service_worker } from "./build/service_worker.js";
-import { dev } from "./dev/index.js";
-import { preview } from "./preview/index.js";
 import { get_env } from "./utils/env/load.js";
 import { create_static_module } from "./utils/env/resolve.js";
 import { assets_base, logger } from "./utils/index.js";
 
+import { adapt } from "../adapt/index.js";
+
+import { transform } from "../compiler/html/index.js";
+import { VITE_HTML_PLACEHOLDER } from "../utils/constants.js";
+
+import { dev } from "./dev/index.js";
+import { preview } from "./preview/index.js";
+
 import { FileSystemLive } from "../FileSystem.js";
 import * as Generated from "../Generated/index.js";
+import { Logger as SimpleLogger } from "../Logger.js";
 import * as CoreConfig from "../config.js";
 import * as Core from "../core.js";
-import { Logger as SimpleLogger } from "../Logger.js";
 
 const preprocess_ = (
   source: string,
@@ -174,7 +176,6 @@ export async function leanweb(user_config?: Config) {
     },
     configureServer(server) {
       vite_server = server;
-      console.log("vite:config:server");
       return dev(server, vite_config_, config);
     },
     configurePreviewServer(vite) {
