@@ -42,6 +42,10 @@ import { assets_base, logger } from "./utils/index.js";
 import { adapt } from "../adapt/index.js";
 
 import { transform } from "../compiler/html/index.js";
+import * as Svelte from "../compiler/template/svelte.js";
+import * as Markdown from "../compiler/template/markdown.js";
+import * as Template from "../compiler/template/index.js";
+
 import { VITE_HTML_PLACEHOLDER } from "../utils/constants.js";
 
 import { dev } from "./dev/index.js";
@@ -496,34 +500,34 @@ export async function leanweb(user_config?: Config) {
       if (!id.endsWith(html_postfix)) return;
       return fs.readFileSync(id.replace(html_postfix_regex, ""), "utf-8");
     },
-    async transform(html, id_) {
-      const id = id_.endsWith(html_postfix)
-        ? id_.replace(html_postfix_regex, "")
-        : id_;
+    async transform(html, id) {
+      const filename = id.endsWith(html_postfix)
+        ? id.replace(html_postfix_regex, "")
+        : id;
 
-      if (html_file_regex.test(id)) {
+      if (html_file_regex.test(filename)) {
         const program = Effect.gen(function* ($) {
-          const file = id.replace(cwd, "");
+          const short_file = filename.replace(cwd, "");
 
-          yield* $(Effect.log(`compiling ${file}`));
+          yield* $(Effect.log(`compiling ${short_file}`));
 
           const code = yield* $(
-            Effect.if(isMarkdown(id), {
+            Effect.if(isMarkdown(filename), {
               onFalse: Effect.succeed(html),
               onTrue: pipe(
-                compileMarkdown(html),
-                Effect.map(({ code }) => code),
-                Effect.catchTag("NoSuchElementException", () =>
-                  Effect.succeed(html)
-                )
+                Template.markdown.compile(html),
+                Effect.map(Option.map(({ code }) => code)),
+                Effect.map(Option.getOrElse(() => html))
               ),
             })
           );
 
           const without_vite_client = yield* $(
-            transform(code, { cwd, filename: id }),
+            transform(code, { cwd, filename }),
             Effect.flatMap((code) =>
-              Effect.promise(() => vite_server.transformIndexHtml(id, code))
+              Effect.promise(() =>
+                vite_server.transformIndexHtml(filename, code)
+              )
             ),
             /** Remove vite client just incase we have a component that has a svelte script with minimal html, cause
              * there'll be no head for vite to inject the vite client script. Which means we'll have two script tags
@@ -533,11 +537,11 @@ export async function leanweb(user_config?: Config) {
           );
 
           return yield* $(
-            preprocess_(without_vite_client, { filename: id }),
-            Effect.flatMap(({ code }) =>
-              compileTemplate(code, { dev: true, filename: id })
+            Template.svelte.preprocess(without_vite_client, { filename }),
+            Effect.flatMap((_) =>
+              Template.svelte.compile(_.code, { dev: true, filename })
             ),
-            Effect.tap(() => Effect.log(`compiled ${file}`))
+            Effect.tap(() => Effect.log(`compiled ${short_file}`))
           );
         });
 
@@ -629,11 +633,18 @@ export async function leanweb(user_config?: Config) {
 
       const result = await pipe(
         Effect.if(isMarkdown(clean_id), {
-          onTrue: compileMarkdown(code).pipe(Effect.map(({ code }) => code)),
           onFalse: Effect.succeed(code),
+          onTrue: Template.markdown
+            .compile(code)
+            .pipe(
+              Effect.map(Option.map(({ code }) => code)),
+              Effect.map(Option.getOrElse(() => code))
+            ),
         }),
-        Effect.flatMap((code) => preprocess_(code, { filename: id })),
-        Effect.flatMap(({ code }) => compileTemplate(code)),
+        Effect.flatMap((code) =>
+          Template.svelte.preprocess(code, { filename: id })
+        ),
+        Effect.flatMap(({ code }) => Template.svelte.compile(code)),
         Effect.runPromise
       );
 
