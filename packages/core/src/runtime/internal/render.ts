@@ -63,19 +63,9 @@ export function render(
   string
 > {
   return Effect.gen(function* ($) {
-    const entries = [
-      view,
-      `${view}.html`,
-      `${view}/index.html`,
-      `${view}.md.html`,
-      `${view}/index.md.html`,
-    ];
-
-    const entry = yield* $(A.findFirst(entries, (entry) => entry in views));
-
     const component = yield* $(
       Effect.tryPromise({
-        try: () => views[entry](),
+        try: () => views[view](),
         catch: (e) => e as CompileError,
       })
     );
@@ -83,7 +73,7 @@ export function render(
     return yield* $(
       Effect.try({
         try: () => renderComponent(component, props),
-        catch: (e) => new RenderError(entry, coalesce_to_error(e)),
+        catch: (e) => new RenderError(view, coalesce_to_error(e)),
       })
     );
   });

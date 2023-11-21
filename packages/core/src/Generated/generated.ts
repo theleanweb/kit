@@ -14,19 +14,19 @@ export function writeViews(
   files: Array<{ name: string; file: string }>
 ) {
   const dictionary = files.map(({ name, file }) => {
-    // const p = Path.parse(name);
+    const p = Path.parse(name);
     const relative = Path.relative(output, file);
 
-    // return pipe(
-    //   [name, `${p.dir}/${p.name}`, p.dir],
-    //   List.map(
-    //     (name) =>
-    //       `["${name}"]: async () => (await import('${relative}')).default`
-    //   ),
-    //   List.join(",\n")
-    // );
+    return pipe(
+      [name, `${p.dir}/${p.name}`, p.dir],
+      List.map(
+        (name) =>
+          `["${name}"]: async () => (await import('${relative}')).default`
+      ),
+      List.join(",\n")
+    );
 
-    return `["${name}"]: async () => (await import('${relative}')).default`;
+    // return `["${name}"]: async () => (await import('${relative}')).default`;
   });
 
   return Effect.flatMap(FileSystem.FileSystem, (fs) =>
