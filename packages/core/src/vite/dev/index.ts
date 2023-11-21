@@ -74,7 +74,6 @@ export async function dev(
   );
 
   const runFork = Runtime.runFork(runtime);
-  const runSync = Runtime.runSync(runtime);
   const runPromise = Runtime.runPromise(runtime);
 
   const core = await runPromise(Core.Entry);
