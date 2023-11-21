@@ -13,34 +13,28 @@ import sirv from "sirv";
 
 import { Hono } from "hono";
 
-import * as O from "effect/Option";
-import * as Exit from "effect/Exit";
-import * as Either from "effect/Either";
 import * as Effect from "effect/Effect";
-import * as Runtime from "effect/Runtime";
-import * as FiberRefs from "effect/FiberRefs";
-import * as RuntimeFlags from "effect/RuntimeFlags";
+import * as Exit from "effect/Exit";
 import { pipe } from "effect/Function";
 import * as Layer from "effect/Layer";
 import * as Logger from "effect/Logger";
-import * as LogLevel from "effect/LogLevel";
+import * as O from "effect/Option";
+import * as Runtime from "effect/Runtime";
+import * as Cause from "effect/Cause";
 
 import * as NodeFileSystem from "@effect/platform-node/FileSystem";
 
 import { FileSystemLive } from "../../FileSystem.js";
 import * as Generated from "../../Generated/index.js";
-import * as CoreConfig from "../../config.js";
-import * as Core from "../../core.js";
 import { Logger as SimpleLogger } from "../../Logger.js";
+import * as Core from "../../core.js";
 
 import { ValidatedConfig } from "../../config/schema.js";
 import { getRequest, setResponse } from "../../node/index.js";
 import { installPolyfills } from "../../node/polyfills.js";
-import * as sync from "../../sync/index.js";
 import { coalesce_to_error } from "../../utils/error.js";
 import { to_fs } from "../../utils/filesystem.js";
 import { should_polyfill } from "../../utils/platform.js";
-import { resolveEntry } from "../../utils/utils.js";
 
 const script_file_regex = /\.(js|ts)$/;
 
@@ -85,8 +79,6 @@ export async function dev(
 
   const core = await runPromise(Core.Entry);
 
-  // sync.init(config, vite_config.mode);
-
   const generated = `${config.outDir}/generated`;
 
   runFork(
@@ -101,53 +93,66 @@ export async function dev(
     ])
   );
 
-  async function loud_ssr_load_module(url: string) {
-    try {
-      return await vite.ssrLoadModule(url);
-    } catch (err: any) {
-      const msg = buildErrorMessage(err, [
-        `Internal server error: ${err.message}`,
-      ]);
+  function loud_ssr_load_module(url: string) {
+    return pipe(
+      Effect.tryPromise(() => vite.ssrLoadModule(url)),
+      Effect.catchAll((e) => {
+        const err = e as any;
 
-      vite.config.logger.error(msg, { error: err });
+        const msg = buildErrorMessage(err, [
+          `Internal server error: ${err.message}`,
+        ]);
 
-      vite.ws.send({
-        type: "error",
-        err: {
-          ...err,
-          // these properties are non-enumerable and will
-          // not be serialized unless we explicitly include them
-          message: err.message,
-          stack: err.stack,
-        },
-      });
+        vite.config.logger.error(msg, { error: err });
 
-      throw err;
-    }
+        vite.ws.send({
+          type: "error",
+          err: {
+            ...err,
+            // these properties are non-enumerable and will
+            // not be serialized unless we explicitly include them
+            message: err.message,
+            stack: err.stack,
+          },
+        });
+
+        return Effect.fail(e);
+      })
+    );
   }
 
-  async function resolve(id: string) {
-    const url = id.startsWith("..")
-      ? `/@fs${path.posix.resolve(id)}`
-      : `/${id}`;
+  function resolve(id: string) {
+    return Effect.gen(function* (_) {
+      const url = id.startsWith("..")
+        ? `/@fs${path.posix.resolve(id)}`
+        : `/${id}`;
 
-    const module = await loud_ssr_load_module(url);
+      const [module, module_node] = yield* _(
+        Effect.all([
+          loud_ssr_load_module(url),
+          Effect.tryPromise(() => vite.moduleGraph.getModuleByUrl(url)),
+        ])
+      );
 
-    const module_node = await vite.moduleGraph.getModuleByUrl(url);
+      if (!module_node) {
+        return yield* _(
+          Effect.fail(new Error(`Could not find node for ${url}`))
+        );
+      }
 
-    if (!module_node) throw new Error(`Could not find node for ${url}`);
-
-    return { module, module_node, url };
+      return { module, module_node, url };
+    });
   }
 
   function update() {
-    Effect.all([
-      Generated.writeEnv(config.outDir, config.env, vite_config.mode),
-      Generated.writeConfig(config, generated),
-      Effect.flatMap(core.views, (views) =>
-        Generated.writeViews(generated, views)
-      ),
-    ]).pipe(
+    pipe(
+      Effect.all([
+        Generated.writeEnv(config.outDir, config.env, vite_config.mode),
+        Generated.writeConfig(config, generated),
+        Effect.flatMap(core.views, (views) =>
+          Generated.writeViews(generated, views)
+        ),
+      ]),
       Effect.catchAll((error) => {
         const message = error.message;
         vite.ws.send({ type: "error", err: { message, stack: "" } });
@@ -190,7 +195,7 @@ export async function dev(
 
   vite.watcher.on("all", (_, file) => {
     if (file.startsWith(serviceWorker)) {
-      sync.config(config);
+      runFork(Generated.writeConfig(config, generated));
     }
   });
 
@@ -247,12 +252,9 @@ export async function dev(
     remove_static_middlewares(vite.middlewares);
 
     vite.middlewares.use(async (req, res, next) => {
-      // Vite's base middleware strips out the base path. Restore it
-      const original_url = req.url;
-
       req.url = req.originalUrl;
 
-      try {
+      const program = Effect.gen(function* (_) {
         const base = `${vite.config.server.https ? "https" : "http"}://${
           req.headers[":authority"] || req.headers.host
         }`;
@@ -272,10 +274,8 @@ export async function dev(
           return;
         }
 
-        // const url = new URL(base + req.url);
-
         if (decoded === config.paths.base + "/service-worker.js") {
-          const resolved = await runPromise(core.serviceWorker);
+          const resolved = yield* _(core.serviceWorker);
 
           if (O.isSome(resolved)) {
             res.writeHead(200, { "content-type": "application/javascript" });
@@ -288,6 +288,7 @@ export async function dev(
           return;
         }
 
+        // reference to the file that served the html containing the requested asset
         const source = url.searchParams.get("s");
 
         if (source) {
@@ -298,13 +299,15 @@ export async function dev(
 
           if (is_file) {
             if (is_script_request(file)) {
-              res.writeHead(200, { "content-type": "application/javascript" });
+              res.writeHead(200, {
+                "content-type": "application/javascript",
+              });
               res.end(`import '${to_fs(file)}';`);
               return;
             }
 
             if (is_css_request(file)) {
-              const resolved = await resolve(file);
+              const resolved = yield* _(resolve(file));
               res.writeHead(200, { "content-type": "text/css" });
               res.end(resolved.module.default);
               return;
@@ -324,20 +327,45 @@ export async function dev(
           }
         }
 
-        const module = await vite.ssrLoadModule(config.files.entry);
+        const server = yield* _(
+          Effect.promise(() => vite.ssrLoadModule(config.files.entry)),
+          Effect.map((module) => O.fromNullable(module.default)),
+          Effect.map(O.map((_) => _ as Hono))
+        );
 
-        const server = module.default as Hono;
+        if (O.isNone(server)) {
+          yield* _(
+            Effect.logWarning("No exported server/router in entry file")
+          );
 
-        let request;
-
-        try {
-          request = await getRequest({ base, request: req });
-        } catch (err: any) {
-          res.statusCode = err.status || 400;
-          return res.end("Invalid request body");
+          return next();
         }
 
-        const rendered = await server.fetch(request);
+        let request = yield* _(
+          Effect.try(() => getRequest({ base, request: req })),
+          Effect.exit
+        );
+
+        if (Exit.isFailure(request)) {
+          res.statusCode = 400;
+          res.end("Invalid request body");
+          return yield* _(Effect.logError(Cause.pretty(request.cause)));
+        }
+
+        const response = server.value.fetch(request.value);
+
+        const rendered = yield* _(
+          response instanceof Promise
+            ? Effect.tryPromise(() => response)
+            : Effect.try(() => response)
+        );
+
+        if (!rendered) {
+          yield* _(
+            Effect.logWarning("Request handler returned with no response"),
+            Effect.annotateLogs("url", url)
+          );
+        }
 
         if (rendered.status === 404) {
           // @ts-expect-error
@@ -347,11 +375,25 @@ export async function dev(
         } else {
           setResponse(res, rendered);
         }
-      } catch (e) {
-        const error = coalesce_to_error(e);
-        res.statusCode = 500;
-        res.end(fix_stack_trace(error.stack!));
-      }
+      });
+
+      pipe(
+        program,
+        Effect.catchAll((e) => {
+          res.statusCode = 500;
+
+          if (Cause.isCause(e)) {
+            const err = Cause.pretty(e);
+            res.end(err);
+            return Effect.logError(err);
+          } else {
+            const error = coalesce_to_error(e);
+            res.end(fix_stack_trace(error.stack!));
+            return Effect.unit;
+          }
+        }),
+        runFork
+      );
     });
   };
 }

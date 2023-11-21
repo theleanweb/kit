@@ -122,7 +122,7 @@ function get_raw_body(req: IncomingMessage, body_size_limit?: number) {
   });
 }
 
-export async function getRequest({
+export function getRequest({
   request,
   base,
   bodySizeLimit,

@@ -9,10 +9,6 @@ import type {
 } from "vite";
 import * as vite from "vite";
 
-import { MdsvexCompileOptions, compile as compileSvx } from "mdsvex";
-import svelte_preprocess from "svelte-preprocess";
-import { CompileOptions, compile, preprocess } from "svelte/compiler";
-
 import * as Effect from "effect/Effect";
 import * as Either from "effect/Either";
 import { pipe } from "effect/Function";
@@ -42,8 +38,6 @@ import { assets_base, logger } from "./utils/index.js";
 import { adapt } from "../adapt/index.js";
 
 import { transform } from "../compiler/html/index.js";
-import * as Svelte from "../compiler/template/svelte.js";
-import * as Markdown from "../compiler/template/markdown.js";
 import * as Template from "../compiler/template/index.js";
 
 import { VITE_HTML_PLACEHOLDER } from "../utils/constants.js";
@@ -56,25 +50,6 @@ import * as Generated from "../Generated/index.js";
 import { Logger as SimpleLogger } from "../Logger.js";
 import * as CoreConfig from "../config.js";
 import * as Core from "../core.js";
-
-const preprocess_ = (
-  source: string,
-  options?: { filename?: string | undefined }
-) => {
-  return Effect.promise(() =>
-    preprocess(source, [svelte_preprocess()], options)
-  );
-};
-
-const compileTemplate = (
-  source: string,
-  { generate = "ssr", ...options }: CompileOptions = {}
-) => Effect.try(() => compile(source, { ...options, generate }));
-
-const compileMarkdown = (source: string, options?: MdsvexCompileOptions) =>
-  Effect.promise(() => compileSvx(source, options)).pipe(
-    Effect.flatMap(Option.fromNullable)
-  );
 
 function create_service_worker_module(
   config: ValidatedConfig,
