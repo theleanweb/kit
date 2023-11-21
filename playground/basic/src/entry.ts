@@ -11,9 +11,12 @@ app.get("/", (ctx) => {
 
 app.get("/main", (ctx) => view(ctx, "main", {}));
 
-app.get("/home", (ctx) => {
+app.get("/home", async (ctx) => {
   console.log(getCookie(ctx, "age"));
-  return view(ctx, "home/home.html", {});
+
+  // throw new Error("fail");
+
+  // return view(ctx, "home/home.html", {});
 });
 
 app.get("/about", (ctx) => view(ctx, "about", {}));
@@ -23,4 +26,8 @@ app.get("/destroy", (ctx) => {
   return ctx.redirect("/");
 });
 
-export default app;
+// app.onError((ctx) => {
+//   return Response.json(JSON.stringify({ name: "hello" }));
+// });
+
+// export default app;
