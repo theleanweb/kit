@@ -381,6 +381,8 @@ export async function dev(
         Effect.catchAll((e) => {
           res.statusCode = 500;
 
+          console.log(e);
+
           if (Cause.isCause(e)) {
             const err = Cause.pretty(e);
             res.end(err);

@@ -7,7 +7,7 @@ const preprocess_ = (
   source: string,
   options?: { filename?: string | undefined }
 ) => {
-  return Effect.promise(() =>
+  return Effect.tryPromise(() =>
     preprocess(source, [svelte_preprocess()], options)
   );
 };

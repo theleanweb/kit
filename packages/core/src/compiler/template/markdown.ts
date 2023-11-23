@@ -6,7 +6,7 @@ import { pipe } from "effect/Function";
 
 const compileMarkdown = (source: string, options?: MdsvexCompileOptions) =>
   pipe(
-    Effect.promise(() => compile(source, options)),
+    Effect.tryPromise(() => compile(source, options)),
     Effect.map(Option.fromNullable)
   );
 
