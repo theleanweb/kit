@@ -10,11 +10,6 @@ import { SSRComponent } from "../../types/internal.js";
 import { VITE_HTML_CLIENT } from "../../utils/constants.js";
 import { notFound } from "./templates.js";
 
-class RenderError {
-  readonly _tag = "RenderError";
-  constructor(readonly module: string, readonly cause: Error) {}
-}
-
 export function renderComponent(component: SSRComponent, props: object = {}) {
   const rendered = component.render(props);
 
