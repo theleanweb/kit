@@ -11,6 +11,7 @@ import * as vite from "vite";
 
 import * as Effect from "effect/Effect";
 import * as Either from "effect/Either";
+import * as Cause from "effect/Cause";
 import { pipe } from "effect/Function";
 import * as Layer from "effect/Layer";
 import * as Logger from "effect/Logger";
@@ -514,7 +515,11 @@ export async function leanweb(user_config?: Config) {
           return yield* $(
             Template.svelte.preprocess(without_vite_client, { filename }),
             Effect.flatMap((_) =>
-              Template.svelte.compile(_.code, { dev: true, filename })
+              Template.svelte.compile(_.code, {
+                filename,
+                dev: true,
+                sourcemap: _.map,
+              })
             ),
             Effect.tap(() => Effect.log(`compiled ${short_file}`))
           );
