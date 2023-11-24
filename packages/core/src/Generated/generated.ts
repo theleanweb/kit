@@ -17,16 +17,18 @@ export function writeViews(
     const p = Path.parse(name);
     const relative = Path.relative(output, file);
 
-    return pipe(
-      [name, `${p.dir}/${p.name}`, p.dir],
-      List.map(
-        (name) =>
-          `["${name}"]: async () => (await import('${relative}')).default`
-      ),
-      List.join(",\n")
-    );
+    const entry = (name: string) =>
+      `["${name}"]: async () => (await import('${relative}')).default`;
 
-    // return `["${name}"]: async () => (await import('${relative}')).default`;
+    if (p.name === "index" || p.name === p.dir) {
+      return pipe(
+        [name, `${p.dir}/${p.name}`, p.dir],
+        List.map((name) => entry(name)),
+        List.join(",\n")
+      );
+    }
+
+    return entry(name);
   });
 
   return Effect.flatMap(FileSystem.FileSystem, (fs) =>
