@@ -13,6 +13,7 @@ import * as Effect from "effect/Effect";
 import * as Either from "effect/Either";
 import * as Cause from "effect/Cause";
 import { pipe } from "effect/Function";
+import * as LogLevel from "effect/LogLevel";
 import * as Layer from "effect/Layer";
 import * as Logger from "effect/Logger";
 import * as Option from "effect/Option";
@@ -102,12 +103,12 @@ let serverEntry: Effect.Effect.Success<
 const CoreFileSystem = FileSystemLive.pipe(Layer.use(NodeFileSystem.layer));
 
 export async function leanweb(user_config?: Config) {
-  let vite_env_: ConfigEnv;
+  let vite_env: ConfigEnv;
   let vite_server: ViteDevServer;
-  let vite_config_: ResolvedConfig;
-  let user_vite_config_: UserConfig;
+  let vite_config: ResolvedConfig;
+  let user_vite_config: UserConfig;
 
-  let cwd_env: Env;
+  let env: Env;
 
   let finalize: () => Promise<void>;
 
@@ -150,41 +151,41 @@ export async function leanweb(user_config?: Config) {
     relative_path.includes(root_output_directory);
 
   const setup: Plugin = {
-    name: "setup",
+    name: "leanweb:plugin-setup",
     configResolved(config) {
-      vite_config_ = config;
+      vite_config = config;
     },
     configureServer(server) {
       vite_server = server;
-      return dev(server, vite_config_, config);
+      return dev(server, vite_config, config);
     },
     configurePreviewServer(vite) {
-      return preview(vite, vite_config_, config);
+      return preview(vite, vite_config, config);
     },
-    async config(vite_config, vite_config_env) {
-      vite_env_ = vite_config_env;
-      user_vite_config_ = vite_config;
+    async config(vite_config, config_env) {
+      vite_env = config_env;
+      user_vite_config = vite_config;
 
-      const is_build = vite_config_env.command === "build";
-
-      cwd_env = get_env(config.env, vite_config_env.mode);
+      env = get_env(config.env, config_env.mode);
 
       let input: InputOption;
+      const is_build = config_env.command === "build";
 
       if (is_build && build_step !== "server") {
-        views = await runPromise(core.views);
-
-        await runPromise(
-          Effect.all([
-            Generated.writeTSConfig(config.outDir, config, cwd),
-            Generated.writeEnv(config.outDir, config.env, vite_config_env.mode),
-            Generated.writeInternal(generated),
-            Generated.writeConfig(config, generated),
-            Generated.writeViews(generated, views),
-          ])
+        views = await core.views.pipe(
+          Logger.withMinimumLogLevel(LogLevel.None),
+          Effect.runPromise
         );
 
         input = views.map((file) => file.file);
+
+        await Effect.all([
+          Generated.writeTSConfig(config.outDir, config, cwd),
+          Generated.writeEnv(config.outDir, config.env, config_env.mode),
+          Generated.writeInternal(generated),
+          Generated.writeConfig(config, generated),
+          Generated.writeViews(generated, views),
+        ]).pipe(Logger.withMinimumLogLevel(LogLevel.None), runPromise);
       } else {
         serverEntry = await pipe(core.server, runPromise);
 
@@ -207,9 +208,9 @@ export async function leanweb(user_config?: Config) {
             );
           }
 
-          console.log(
-            colors.yellow("Please provide a entry point to your server")
-          );
+          // console.log(
+          //   colors.yellow("Please provide a entry point to your server")
+          // );
 
           process.exit(1);
         }
@@ -252,7 +253,7 @@ export async function leanweb(user_config?: Config) {
           },
           watch: {
             ignored: [
-              // Ignore all siblings of config.kit.outDir/generated
+              // Ignore all siblings of config.outDir/generated
               `${posixify(config.outDir)}/!(generated)`,
             ],
           },
@@ -264,7 +265,7 @@ export async function leanweb(user_config?: Config) {
           exclude: [
             "leanweb-kit",
             // exclude kit features so that libraries using them work even when they are prebundled
-            // this does not affect app code, just handling of imported libraries that use $app or $env
+            // this does not affect app code, just handling of imported libraries that use $env
             "$env",
           ],
         },
@@ -286,9 +287,9 @@ export async function leanweb(user_config?: Config) {
           manifest: "vite-manifest.json",
           target: ssr ? "node16.14" : undefined,
           cssMinify:
-            user_vite_config_.build?.minify == null
+            user_vite_config.build?.minify == null
               ? true
-              : !!user_vite_config_.build.minify,
+              : !!user_vite_config.build.minify,
           rollupOptions: {
             input,
             output: {
@@ -307,8 +308,8 @@ export async function leanweb(user_config?: Config) {
     buildStart() {
       if (build_step === "server") return;
 
-      if (vite_env_.command === "build") {
-        if (!vite_config_.build.watch) rimraf(output_directory);
+      if (vite_env.command === "build") {
+        if (!vite_config.build.watch) rimraf(output_directory);
         mkdirp(output_directory);
       }
     },
@@ -323,22 +324,22 @@ export async function leanweb(user_config?: Config) {
       if (build_step !== "server") {
         build_step = "server";
 
-        const verbose = vite_config_.logLevel === "info";
+        const verbose = vite_config.logLevel === "info";
         const log = logger({ verbose });
 
         // Initiate second build step that builds the final server output
         await vite.build({
-          mode: vite_env_.mode,
-          logLevel: vite_config_.logLevel,
-          configFile: vite_config_.configFile,
-          clearScreen: vite_config_.clearScreen,
+          mode: vite_env.mode,
+          logLevel: vite_config.logLevel,
+          configFile: vite_config.configFile,
+          clearScreen: vite_config.clearScreen,
           optimizeDeps: {
-            force: vite_config_.optimizeDeps.force,
+            force: vite_config.optimizeDeps.force,
           },
           build: {
-            minify: user_vite_config_.build?.minify,
-            sourcemap: vite_config_.build.sourcemap,
-            assetsInlineLimit: vite_config_.build.assetsInlineLimit,
+            minify: user_vite_config.build?.minify,
+            sourcemap: vite_config.build.sourcemap,
+            assetsInlineLimit: vite_config.build.assetsInlineLimit,
           },
         });
 
@@ -370,7 +371,7 @@ export async function leanweb(user_config?: Config) {
 
           const client_manifest = JSON.parse(
             fs.readFileSync(
-              `${output_directory}/client/${vite_config_.build.manifest}`,
+              `${output_directory}/client/${vite_config.build.manifest}`,
               "utf-8"
             )
           ) as Manifest;
@@ -384,7 +385,7 @@ export async function leanweb(user_config?: Config) {
           await build_service_worker(
             output_directory,
             config,
-            vite_config_,
+            vite_config,
             [...assets, ...files],
             service_worker.value
           );
@@ -419,7 +420,7 @@ export async function leanweb(user_config?: Config) {
   };
 
   const virtual_modules: Plugin = {
-    name: "virtual-modules",
+    name: "leabweb:plugin-virtual-modules",
     async resolveId(id) {
       // treat $env/static/[public|private] as virtual
       if (id.startsWith("$env/") || id === "$service-worker") {
@@ -429,10 +430,10 @@ export async function leanweb(user_config?: Config) {
     async load(id) {
       switch (id) {
         case "\0$env/static/private":
-          return create_static_module("$env/static/private", cwd_env.private);
+          return create_static_module("$env/static/private", env.private);
 
         case "\0$env/static/public":
-          return create_static_module("$env/static/public", cwd_env.public);
+          return create_static_module("$env/static/public", env.public);
 
         case "\0$service-worker":
           return pipe(
@@ -446,9 +447,9 @@ export async function leanweb(user_config?: Config) {
 
   // Walk html file and attach the source file name for each asset in the html file, so that
   // we can accurately identify and serve them during dev
-  const compile_serve: Plugin = {
+  const serve: Plugin = {
     apply: "serve",
-    name: "plugin-compile-dev",
+    name: "leanweb:plugin-dev",
     // resolveId: {
     //   order: "pre",
     //   async handler(source, importer, options) {
@@ -532,10 +533,10 @@ export async function leanweb(user_config?: Config) {
     },
   };
 
-  const resolve_build: Plugin = {
+  const build: Plugin = {
     apply: "build",
     enforce: "pre",
-    name: "plugin-resolve-build",
+    name: "leanweb:plugin-build",
     async resolveId(source, importer, options) {
       if (build_step === "server" && importer && html_file_regex.test(source)) {
         let res = await this.resolve(source, importer, {
@@ -658,7 +659,7 @@ export async function leanweb(user_config?: Config) {
   // Add an obfuscator so that vite's html parser doesn't error when it sees a script tag
   // at the beginning of the document
   const strip_svelte: Plugin = {
-    name: "plugin-strip-svelte",
+    name: "leanweb:plugin-strip",
     transformIndexHtml: {
       order: "pre",
       handler(html) {
@@ -670,7 +671,7 @@ export async function leanweb(user_config?: Config) {
   // Remove the above obfuscator
   const restore_script: Plugin = {
     enforce: "post",
-    name: "plugin-restore-svelte",
+    name: "leanweb:plugin-restore",
     transformIndexHtml(html) {
       return html.replace(`${VITE_HTML_PLACEHOLDER}\n`, "");
     },
@@ -678,8 +679,8 @@ export async function leanweb(user_config?: Config) {
 
   return [
     setup,
-    compile_serve,
-    resolve_build,
+    serve,
+    build,
     strip_svelte,
     restore_script,
     virtual_modules,

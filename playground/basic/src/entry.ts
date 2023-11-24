@@ -16,7 +16,7 @@ app.get("/home", async (ctx) => {
 
   // throw new Error("fail");
 
-  // return view(ctx, "home/home.html", {});
+  return view(ctx, "home/home.html", {});
 });
 
 app.get("/about", (ctx) => view(ctx, "about", {}));
@@ -30,4 +30,4 @@ app.get("/destroy", (ctx) => {
 //   return Response.json(JSON.stringify({ name: "hello" }));
 // });
 
-// export default app;
+export default app;

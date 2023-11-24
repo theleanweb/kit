@@ -326,20 +326,6 @@ export async function dev(
           }
         }
 
-        const server = yield* _(
-          Effect.promise(() => vite.ssrLoadModule(config.files.entry)),
-          Effect.map((module) => O.fromNullable(module.default)),
-          Effect.map(O.map((_) => _ as Hono))
-        );
-
-        if (O.isNone(server)) {
-          yield* _(
-            Effect.logWarning("No exported server/router in entry file")
-          );
-
-          return next();
-        }
-
         let request = yield* _(
           Effect.try(() => getRequest({ base, request: req })),
           Effect.exit
@@ -351,7 +337,28 @@ export async function dev(
           return yield* _(Effect.logError(Cause.pretty(request.cause)));
         }
 
-        const response = server.value.fetch(request.value);
+        const server_ = yield* _(
+          Effect.promise(() => vite.ssrLoadModule(config.files.entry)),
+          Effect.map((module) => O.fromNullable(module.default)),
+          Effect.map(O.map((_) => _ as Hono))
+        );
+
+        if (O.isNone(server_)) {
+          yield* _(
+            Effect.logWarning("No exported server/router in entry file")
+          );
+
+          return next();
+        }
+
+        const server = server_.value;
+
+        server.onError((err) => {
+          console.log("onError: ", err);
+          return new Response("Internal server error", { status: 500 });
+        });
+
+        const response = server.fetch(request.value);
 
         const rendered = yield* _(
           response instanceof Promise
@@ -381,7 +388,7 @@ export async function dev(
         Effect.catchAll((e) => {
           res.statusCode = 500;
 
-          console.log(e);
+          console.log("dev", e);
 
           if (Cause.isCause(e)) {
             const err = Cause.pretty(e);
