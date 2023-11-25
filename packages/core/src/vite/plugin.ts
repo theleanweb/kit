@@ -11,10 +11,9 @@ import * as vite from "vite";
 
 import * as Effect from "effect/Effect";
 import * as Either from "effect/Either";
-import * as Cause from "effect/Cause";
 import { pipe } from "effect/Function";
-import * as LogLevel from "effect/LogLevel";
 import * as Layer from "effect/Layer";
+import * as LogLevel from "effect/LogLevel";
 import * as Logger from "effect/Logger";
 import * as Option from "effect/Option";
 import * as List from "effect/ReadonlyArray";
@@ -29,12 +28,10 @@ import colors from "kleur";
 import mime from "mime";
 import { dedent } from "ts-dedent";
 
-import { Config, ValidatedConfig } from "../config/schema.js";
-import { BuildData, Env } from "../types/internal.js";
+import { Config, ValidatedConfig } from "../Config/schema.js";
+import { BuildData } from "../types/internal.js";
 import { mkdirp, posixify, rimraf } from "../utils/filesystem.js";
 import { build_service_worker } from "./build/service_worker.js";
-import { get_env } from "./utils/env/load.js";
-import { create_static_module } from "./utils/env/resolve.js";
 import { assets_base, logger } from "./utils/index.js";
 
 import { adapt } from "../adapt/index.js";
@@ -47,11 +44,12 @@ import { VITE_HTML_PLACEHOLDER } from "../utils/constants.js";
 import { dev } from "./dev/index.js";
 import { preview } from "./preview/index.js";
 
+import * as CoreEnv from "../Env/env.js";
 import { FileSystemLive } from "../FileSystem.js";
 import * as Generated from "../Generated/index.js";
 import { Logger as SimpleLogger } from "../Logger.js";
-import * as CoreConfig from "../config.js";
-import * as Core from "../core.js";
+import * as CoreConfig from "../Config/config.js";
+import * as Core from "../Core.js";
 
 function create_service_worker_module(
   config: ValidatedConfig,
@@ -108,7 +106,7 @@ export async function leanweb(user_config?: Config) {
   let vite_config: ResolvedConfig;
   let user_vite_config: UserConfig;
 
-  let env: Env;
+  let env: CoreEnv.Env;
 
   let finalize: () => Promise<void>;
 
@@ -135,7 +133,10 @@ export async function leanweb(user_config?: Config) {
   const runSync = Runtime.runSync(runtime);
   const runPromise = Runtime.runPromise(runtime);
 
-  const core = await runPromise(Core.Entry);
+  const core = await Core.Entry.pipe(
+    Logger.withMinimumLogLevel(LogLevel.None),
+    runPromise
+  );
 
   const root_output_directory = config.outDir;
   const output_directory = `${root_output_directory}/output`;
@@ -166,7 +167,7 @@ export async function leanweb(user_config?: Config) {
       vite_env = config_env;
       user_vite_config = vite_config;
 
-      env = get_env(config.env, config_env.mode);
+      env = CoreEnv.get_env(config.env, config_env.mode);
 
       let input: InputOption;
       const is_build = config_env.command === "build";
@@ -174,7 +175,7 @@ export async function leanweb(user_config?: Config) {
       if (is_build && build_step !== "server") {
         views = await core.views.pipe(
           Logger.withMinimumLogLevel(LogLevel.None),
-          Effect.runPromise
+          runPromise
         );
 
         input = views.map((file) => file.file);
@@ -187,7 +188,11 @@ export async function leanweb(user_config?: Config) {
           Generated.writeViews(generated, views),
         ]).pipe(Logger.withMinimumLogLevel(LogLevel.None), runPromise);
       } else {
-        serverEntry = await pipe(core.server, runPromise);
+        serverEntry = await pipe(
+          core.server,
+          Logger.withMinimumLogLevel(is_build ? LogLevel.None : LogLevel.All),
+          runPromise
+        );
 
         if (Option.isNone(serverEntry)) {
           const entry = user_config?.files?.entry;
@@ -343,9 +348,10 @@ export async function leanweb(user_config?: Config) {
           },
         });
 
-        const [assets_, service_worker] = await runPromise(
-          Effect.all([core.assets, core.serviceWorker])
-        );
+        const [assets_, service_worker] = await Effect.all([
+          core.assets,
+          core.serviceWorker,
+        ]).pipe(Logger.withMinimumLogLevel(LogLevel.None), runPromise);
 
         assets = assets_;
 
@@ -430,16 +436,22 @@ export async function leanweb(user_config?: Config) {
     async load(id) {
       switch (id) {
         case "\0$env/static/private":
-          return create_static_module("$env/static/private", env.private);
+          return CoreEnv.create_static_module(
+            "$env/static/private",
+            env.private
+          );
 
         case "\0$env/static/public":
-          return create_static_module("$env/static/public", env.public);
+          return CoreEnv.create_static_module("$env/static/public", env.public);
 
         case "\0$service-worker":
           return pipe(
             assets ? Effect.succeed(assets) : core.assets,
             Effect.map((_) => create_service_worker_module(config, _)),
-            Effect.runPromise
+            Logger.withMinimumLogLevel(
+              vite_env.command === "build" ? LogLevel.None : LogLevel.All
+            ),
+            runPromise
           );
       }
     },

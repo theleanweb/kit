@@ -2,7 +2,7 @@ import * as Path from "node:path";
 
 import * as Either from "effect/Either";
 import { pipe } from "effect/Function";
-import { Config, ValidatedConfig } from "./config/schema.js";
+import { Config, ValidatedConfig } from "./schema.js";
 import { ZodError } from "zod";
 
 interface Options {

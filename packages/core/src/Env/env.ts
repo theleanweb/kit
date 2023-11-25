@@ -1,27 +1,18 @@
-import { ValidatedConfig } from "../config/schema.js";
+import { ValidatedConfig } from "../Config/schema.js";
 import { loadEnv } from "vite";
 
 import { dedent } from "ts-dedent";
 import { reserved, valid_identifier } from "./constant.js";
 import { GENERATED_COMMENT } from "../utils/constants.js";
-import { Env } from "../types/internal.js";
 
-// Load environment variables from process.env and .env files
-export function get_env(env_config: ValidatedConfig["env"], mode: string) {
-  const { publicPrefix: public_prefix, privatePrefix: private_prefix } =
-    env_config;
-
-  const env = loadEnv(mode, env_config.dir, "");
-
-  return {
-    public: filter_public_env(env, { public_prefix, private_prefix }),
-    private: filter_private_env(env, { public_prefix, private_prefix }),
-  };
+export interface Env {
+  public: Record<string, string>;
+  private: Record<string, string>;
 }
 
 type PublicPrivate = { public_prefix: string; private_prefix: string };
 
-export function filter_private_env(
+function filter_private_env(
   env: Record<string, string>,
   { public_prefix, private_prefix }: PublicPrivate
 ) {
@@ -34,7 +25,7 @@ export function filter_private_env(
   );
 }
 
-export function filter_public_env(
+function filter_public_env(
   env: Record<string, string>,
   { public_prefix, private_prefix }: PublicPrivate
 ) {
@@ -45,6 +36,19 @@ export function filter_public_env(
         (private_prefix === "" || !k.startsWith(private_prefix))
     )
   );
+}
+
+// Load environment variables from process.env and .env files
+export function get_env(env_config: ValidatedConfig["env"], mode: string) {
+  const { publicPrefix: public_prefix, privatePrefix: private_prefix } =
+    env_config;
+
+  const env = loadEnv(mode, env_config.dir, "");
+
+  return {
+    public: filter_public_env(env, { public_prefix, private_prefix }),
+    private: filter_private_env(env, { public_prefix, private_prefix }),
+  };
 }
 
 export function create_static_module(id: string, env: Record<string, string>) {

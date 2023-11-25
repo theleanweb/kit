@@ -27,9 +27,9 @@ import * as NodeFileSystem from "@effect/platform-node/FileSystem";
 import { FileSystemLive } from "../../FileSystem.js";
 import * as Generated from "../../Generated/index.js";
 import { Logger as SimpleLogger } from "../../Logger.js";
-import * as Core from "../../core.js";
+import * as Core from "../../Core.js";
 
-import { ValidatedConfig } from "../../config/schema.js";
+import { ValidatedConfig } from "../../Config/schema.js";
 import { getRequest, setResponse } from "../../node/index.js";
 import { installPolyfills } from "../../node/polyfills.js";
 import { coalesce_to_error } from "../../utils/error.js";

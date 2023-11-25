@@ -11,7 +11,7 @@ import ts from "typescript";
 
 import { write_if_changed } from "../utils.js";
 import { posixify } from "../utils/filesystem.js";
-import { ValidatedConfig } from "../config/schema.js";
+import { ValidatedConfig } from "../Config/schema.js";
 
 function maybe_file(cwd: string, file: string) {
   const resolved = Path.resolve(cwd, file);

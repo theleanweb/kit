@@ -1,10 +1,11 @@
 import * as fs from "node:fs";
 import * as vite from "vite";
 import { dedent } from "ts-dedent";
-import { ValidatedConfig } from "../../config/schema.js";
 import type { ResolvedConfig } from "vite";
-import { Asset } from "../../types/internal.js";
+
+import { ValidatedConfig } from "../../Config/schema.js";
 import { assets_base } from "../utils/index.js";
+import { Asset } from "../../Core.js";
 
 const s = JSON.stringify;
 

@@ -1,7 +1,7 @@
 import colors from "kleur";
 
 import { Logger } from "../../types/internal.js";
-import { ValidatedConfig } from "../../config/schema.js";
+import { ValidatedConfig } from "../../Config/schema.js";
 
 export function assets_base(config: ValidatedConfig) {
   return (config.paths.assets || config.paths.base || ".") + "/";

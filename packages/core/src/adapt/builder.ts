@@ -10,7 +10,7 @@ import * as zlib from "node:zlib";
 
 import { glob } from "glob";
 
-import { ValidatedConfig } from "../config/schema.js";
+import { ValidatedConfig } from "../Config/schema.js";
 import { BuildData, Builder, Logger } from "../types/internal.js";
 import { copy, mkdirp, rimraf } from "../utils/filesystem.js";
 import { resolve } from "node:path";

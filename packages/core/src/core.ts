@@ -16,12 +16,17 @@ import { PlatformError } from "@effect/platform/Error";
 import * as PlatformFileSystem from "@effect/platform/FileSystem";
 
 import { FileSystem } from "./FileSystem.js";
-import { ValidatedConfig } from "./config/schema.js";
+import { ValidatedConfig } from "./Config/schema.js";
 
 export interface Asset {
   file: string;
   size: number;
   type: string | null;
+}
+
+export interface View {
+  file: string;
+  name: string;
 }
 
 export const Config = Context.Tag<ValidatedConfig>();
@@ -96,7 +101,7 @@ export const Entry = Effect.gen(function* (_) {
 
       if (files.length > 0) {
         yield* _(
-          Console.log(
+          Effect.log(
             pipe(
               files,
               List.map((file) => color.green(`-> ${file}`)),
@@ -142,4 +147,4 @@ export const Entry = Effect.gen(function* (_) {
       return file;
     }),
   };
-}).pipe(Logger.withMinimumLogLevel(LogLevel.Warning));
+});

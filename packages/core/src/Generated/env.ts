@@ -1,10 +1,9 @@
 import * as path from "node:path";
-import { create_dynamic_types, create_static_types } from "../Env/env.js";
-import { ValidatedConfig } from "../config/schema.js";
-import { Env } from "../types/internal.js";
+import { Env, create_dynamic_types, create_static_types } from "../Env/env.js";
+import { ValidatedConfig } from "../Config/schema.js";
 import { write_if_changed } from "../utils.js";
 import { GENERATED_COMMENT } from "../utils/constants.js";
-import { get_env } from "../vite/utils/env/load.js";
+import { get_env } from "../Env/env.js";
 
 const template = (
   env: Env,

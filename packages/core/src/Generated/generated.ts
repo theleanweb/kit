@@ -6,7 +6,7 @@ import * as FileSystem from "@effect/platform/FileSystem";
 
 import { dedent } from "ts-dedent";
 
-import { ValidatedConfig } from "../config/schema.js";
+import { ValidatedConfig } from "../Config/schema.js";
 import { pipe } from "effect/Function";
 
 export function writeViews(
