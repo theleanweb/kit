@@ -3,7 +3,7 @@ import { dedent } from "ts-dedent";
 
 import type { Context } from "hono";
 
-import options from "__GENERATED__/config.js";
+import config from "__GENERATED__/config.js";
 import { views } from "__GENERATED__/views.js";
 
 import { SSRComponent } from "../../types/internal.js";
@@ -26,10 +26,10 @@ export function renderComponent(component: SSRComponent, props: object = {}) {
     head.append(VITE_HTML_CLIENT);
   }
 
-  if (options.service_worker) {
+  if (config.serviceWorker.register) {
     const opts = __LEANWEB_DEV__ ? ", { type: 'module' }" : "";
 
-    document("body").append(dedent`
+    document("body").append(dedent/*html*/ `
     <script>
     if ('serviceWorker' in navigator) {
       addEventListener('load', function() {
@@ -59,7 +59,7 @@ export async function view(
     let html = "Not found";
 
     if (__LEANWEB_DEV__) {
-      html = notFound({ view, mode: "serve", dir: options.files.views });
+      html = notFound({ view, mode: "serve", dir: config.files.views });
     }
 
     return context.html(html, { status: 404 });

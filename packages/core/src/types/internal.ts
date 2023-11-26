@@ -16,15 +16,6 @@ export interface BuildData {
   service_worker: string | null;
 }
 
-export interface SSROptions {
-  service_worker: boolean;
-  env_private_prefix: string;
-  files: ValidatedConfig["files"];
-  templates: {
-    error(values: { message: string; status: number }): string;
-  };
-}
-
 export interface Logger {
   (msg: string): void;
   success(msg: string): void;
