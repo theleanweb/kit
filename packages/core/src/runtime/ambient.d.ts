@@ -6,6 +6,6 @@ declare module "__GENERATED__/views.js" {
 }
 
 declare module "__GENERATED__/config.js" {
-  const options: import("../types/internal.js").SSROptions;
+  const options: import("../Config/schema.js").ValidatedConfig;
   export default options;
 }

@@ -355,17 +355,6 @@ export async function leanweb(user_config?: Config) {
 
         assets = assets_;
 
-        const build_data: BuildData = {
-          assets,
-          app_dir: config.appDir,
-          app_path: `${config.paths.base.slice(1)}${
-            config.paths.base ? "/" : ""
-          }${config.appDir}`,
-          service_worker: Option.isSome(service_worker)
-            ? "service-worker.js"
-            : null,
-        };
-
         if (Option.isSome(service_worker)) {
           if (config.paths.assets) {
             throw new Error(
@@ -396,6 +385,17 @@ export async function leanweb(user_config?: Config) {
             service_worker.value
           );
         }
+
+        const build_data: BuildData = {
+          assets,
+          app_dir: config.appDir,
+          app_path: `${config.paths.base.slice(1)}${
+            config.paths.base ? "/" : ""
+          }${config.appDir}`,
+          service_worker: Option.isSome(service_worker)
+            ? "service-worker.js"
+            : null,
+        };
 
         // we need to defer this to closeBundle, so that adapters copy files
         // created by other Vite plugins
