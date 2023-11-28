@@ -1,8 +1,7 @@
-import { pipe } from "@effect/data/Function";
+import { pipe } from "effect/Function";
 import * as Http from "http-kit";
 import * as Res from "http-kit/response";
 import type { Article } from "../models/article.js";
-import * as Effect from "@effect/io/Effect";
 
 interface SearchParams {
   limit?: number;
@@ -29,17 +28,13 @@ export function getArticles({
         ...(favorited ? { favorited } : {}),
       }),
     }),
-    Res.filterStatusOk(),
-    Res.toJson<{ articles: Array<Article>; articlesCount: number }>()
+    Res.filterStatusOk,
+    Res.toJson
   );
 }
 
 export function getArticle(slug: string) {
-  return pipe(
-    Http.get(`/articles/${slug}`),
-    Res.filterStatusOk(),
-    Res.toJson<{ article: Article }>()
-  );
+  return pipe(Http.get(`/articles/${slug}`), Res.filterStatusOk, Res.toJson);
 }
 
 export function getPersonalFeed({ offset, limit }: SearchParams) {
@@ -50,8 +45,8 @@ export function getPersonalFeed({ offset, limit }: SearchParams) {
         offset: (offset || "0").toString(),
       }),
     }),
-    Res.filterStatusOk(),
-    Res.toJson<{ articles: Array<Article>; articlesCount: number }>()
+    Res.filterStatusOk,
+    Res.toJson
     // Effect.catchTag("StatusError", (e) => {
     //   return pipe(
     //     Effect.tryPromise({

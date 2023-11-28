@@ -14,4 +14,4 @@ export const Article = S.struct({
   tagList: S.array(S.string),
 });
 
-export type Article = S.To<typeof Article>;
+export type Article = S.Schema.To<typeof Article>;

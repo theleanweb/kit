@@ -1,15 +1,15 @@
 import { Hono } from "hono";
+import { getCookie, setCookie } from "hono/cookie";
 
 import * as Http from "http-kit";
 import * as Fetch from "http-kit/fetch";
 
-import { constNull, pipe } from "@effect/data/Function";
-import * as O from "@effect/data/Option";
-import * as Effect from "@effect/io/Effect";
+import { constNull, pipe } from "effect/Function";
+import * as O from "effect/Option";
+import * as Effect from "effect/Effect";
 
 import { render } from "leanweb-kit/runtime";
 
-import { getCookie, setCookie } from "hono/cookie";
 import { withApiUrl } from "./common/base-url.js";
 import { withAuthToken } from "./common/with-token.js";
 import type { Article } from "./core/models/article.js";

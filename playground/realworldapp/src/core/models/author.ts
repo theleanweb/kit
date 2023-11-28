@@ -7,4 +7,4 @@ export const Author = S.struct({
   following: S.boolean,
 });
 
-export type Author = S.To<typeof Author>;
+export type Author = S.Schema.To<typeof Author>;

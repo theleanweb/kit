@@ -1,10 +1,10 @@
-import { pipe } from "@effect/data/Function";
+import { pipe } from "effect/Function";
 import * as Http from "http-kit";
 import { json } from "http-kit/body";
 import * as Res from "http-kit/response";
-import { User } from "../models/user.js";
 import * as S from "@effect/schema/Schema";
-import * as Effect from "@effect/io/Effect";
+import * as Effect from "effect/Effect";
+import { User } from "../models/user.js";
 
 interface LoginCredentials {
   email: string;
@@ -24,50 +24,45 @@ interface ErrorResponse {
 export function login(credentials: LoginCredentials) {
   return pipe(
     Http.post("/users/login", json({ user: credentials })),
-    Res.filterStatusOk(),
-    Res.toJson<{ user: User }>(),
+    Res.filterStatusOk,
+    Res.toJson,
     Effect.catchTag("StatusError", (e) => {
       return pipe(
         Effect.tryPromise({
           try: () => e.response.json() as Promise<ErrorResponse>,
           catch: () => new Error("JSONDecodeError"),
         }),
-        Effect.flatMap(Effect.fail),
+        Effect.flatMap(Effect.fail)
       );
-    }),
+    })
   );
 }
 
 export function register(credentials: RegisterCredentials) {
   return pipe(
     Http.post("/users", json({ user: credentials })),
-    Res.filterStatusOk(),
-    Res.toJson<{ user: User }>(),
+    Res.filterStatusOk,
+    Res.toJson,
     Effect.catchTag("StatusError", (e) => {
       return pipe(
         Effect.tryPromise({
           try: () => e.response.json() as Promise<ErrorResponse>,
           catch: () => new Error("JSONDecodeError"),
         }),
-        Effect.flatMap(Effect.fail),
+        Effect.flatMap(Effect.fail)
       );
-    }),
+    })
   );
 }
 
 export function getCurrentUser() {
-  return pipe(
-    Http.get("/user"),
-    Res.filterStatusOk(),
-    Res.toJson(),
-    S.parse(User),
-  );
+  return pipe(Http.get("/user"), Res.filterStatusOk, Res.toJson, S.parse(User));
 }
 
 export function updateUser(user: unknown) {
   return pipe(
     Http.put("/user", json({ user })),
-    Res.filterStatusOk(),
-    Res.toJson<{ user: User }>(),
+    Res.filterStatusOk,
+    Res.toJson
   );
 }

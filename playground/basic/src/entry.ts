@@ -30,4 +30,4 @@ app.get("/destroy", (ctx) => {
 //   return Response.json(JSON.stringify({ name: "hello" }));
 // });
 
-// export default app;
+export default app;
