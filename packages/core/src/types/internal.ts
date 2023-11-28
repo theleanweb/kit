@@ -1,5 +1,5 @@
+import { Config } from "../Config/schema.js";
 import { Asset } from "../Core.js";
-import { Config, ValidatedConfig } from "../Config/schema.js";
 
 export interface SSRComponent {
   render(props: Record<string, any>): {
