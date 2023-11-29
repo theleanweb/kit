@@ -13,12 +13,18 @@ export async function build_service_worker(
   out: string,
   config: ValidatedConfig,
   vite_config: ResolvedConfig,
-  assets: Asset[],
+  {
+    assets,
+    static: static_,
+  }: {
+    assets: string[];
+    static: Asset[];
+  },
   service_worker_entry_file: string
 ) {
   const build = new Set();
 
-  assets.forEach((file) => build.add(file.file));
+  assets.forEach((file) => build.add(file));
 
   const service_worker = `${config.outDir}/generated/service-worker.js`;
 
@@ -31,12 +37,20 @@ export async function build_service_worker(
     dedent`
 			export const base = /*@__PURE__*/ ${base};
 
+      export const build = [
+				${Array.from(build)
+          .map((file) => `base + ${s(`/${file}`)}`)
+          .join(",\n")}
+			];
+
 			export const files = [
-				${assets
+				${static_
           .filter((asset) => config.serviceWorker.files(asset.file))
           .map((asset) => `base + ${s(`/${asset.file}`)}`)
           .join(",\n")}
 			];
+
+      export const version = 0;
 		`
   );
 
@@ -63,7 +77,7 @@ export async function build_service_worker(
       alias: [
         // ...get_config_aliases(config),
         { find: "$service-worker", replacement: service_worker },
-        { find: "__SERVER__", replacement: `${config.outDir}/generated` },
+        // { find: "__SERVER__", replacement: `${config.outDir}/generated` },
       ],
     },
   });

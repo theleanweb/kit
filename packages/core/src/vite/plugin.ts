@@ -371,17 +371,20 @@ export async function leanweb(user_config?: Config) {
             )
           ) as Manifest;
 
-          const files = [...Object.values(client_manifest)].map(({ file }) => {
-            const type = mime.getType(file);
-            const url = path.resolve(views_out_directory, file);
-            return { file, type, size: fs.statSync(url).size };
-          });
+          // const files = [...Object.values(client_manifest)].map(({ file }) => {
+          //   const type = mime.getType(file);
+          //   const url = path.resolve(views_out_directory, file);
+          //   return { file, type, size: fs.statSync(url).size };
+          // });
 
           await build_service_worker(
             output_directory,
             config,
             vite_config,
-            [...assets, ...files],
+            {
+              static: assets,
+              assets: [...Object.values(client_manifest)].map((_) => _.file),
+            },
             service_worker.value
           );
         }
