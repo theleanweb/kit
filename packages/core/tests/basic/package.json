@@ -4,17 +4,17 @@
   "description": "",
   "type": "module",
   "scripts": {
-    "dev": "DEV=true vite dev",
+    "dev": "vite dev",
     "prod": "vite build",
     "preview": "vite preview",
-    "start": "ts-node --esm server.ts"
+    "test": "playwright test"
   },
   "keywords": [],
   "author": "Joshua Amaju",
   "license": "ISC",
   "devDependencies": {
-    "@leanweb-kit/adapter-cloudflare": "workspace:*",
     "@leanweb-kit/adapter-vercel": "workspace:*",
+    "@leanweb-kit/adapter-cloudflare": "workspace:*",
     "@types/node": "^20.4.2",
     "autoprefixer": "^10.4.14",
     "leanweb-kit": "workspace:*",

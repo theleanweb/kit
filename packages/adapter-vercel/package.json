@@ -21,8 +21,7 @@
     "index.d.ts"
   ],
   "scripts": {
-    "check": "tsc",
-    "test": "vitest run"
+    "check": "tsc"
   },
   "dependencies": {
     "@hono/node-server": "^1.2.0",

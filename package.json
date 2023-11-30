@@ -4,9 +4,12 @@
   "description": "",
   "private": false,
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "pnpm test -r"
   },
   "keywords": [],
   "author": "Joshua Amaju",
-  "license": "ISC"
+  "license": "ISC",
+  "dependencies": {
+    "playwright": "^1.40.1"
+  }
 }

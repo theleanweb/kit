@@ -24,6 +24,7 @@
   "author": "Joshua Amaju",
   "license": "ISC",
   "devDependencies": {
+    "@playwright/test": "^1.40.1",
     "@types/connect": "^3.4.35",
     "@types/cookie": "^0.5.2",
     "@types/mime": "^3.0.1",
