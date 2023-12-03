@@ -3,15 +3,14 @@ import { view } from "leanweb-kit/runtime";
 import { Hono } from "hono";
 
 import { PRIVATE_STATIC } from "$env/static/private";
-import { env } from "$env/dynamic/private";
+import { PUBLIC_STATIC } from "$env/static/public";
+// import { env } from "$env/dynamic/private";
 
 const app = new Hono();
 const errors = new Hono();
+const env = new Hono();
 
-app.get("/", (ctx) => {
-  setCookie(ctx, "age", "20");
-  return ctx.html('Go to <a href="/about">About</a>');
-});
+app.get("/content-type", (_) => view(_, "home"));
 
 app.get("favicon.ico", (_) => _.json({ surprise: "lol" }));
 
@@ -29,8 +28,7 @@ app.get("/headers/echo", (_) => {
 
 app.get("headers/set-cookie", (_) => {
   const headers = new Headers();
-  headers.append("set-cookie", "answer=42; HttpOnly");
-  headers.append("set-cookie", "problem=comma, separated, values; HttpOnly");
+  headers.append("set-cookie", "cookie2=value2;");
   return _.text("set-cookie", { headers });
 });
 
@@ -42,19 +40,19 @@ app.get("set-cookie", (_) => {
   return _.text("set-cookie");
 });
 
-app.get("/env", (ctx) =>
-  view(ctx, "env", {
-    PRIVATE_STATIC,
-    PRIVATE_DYNAMIC: env.PRIVATE_DYNAMIC,
-  })
-);
+env.get("/private/view", (ctx) => view(ctx, "env", { PRIVATE_STATIC }));
+env.get("/public/view", (ctx) => view(ctx, "env", { PUBLIC_STATIC }));
 
-errors.get("/view", (ctx) => view(ctx, "error/view"));
+env.get("/private", (ctx) => ctx.json({ PRIVATE_STATIC }));
+env.get("/public", (ctx) => ctx.json({ PUBLIC_STATIC }));
+
+errors.get("/view", (ctx) => view(ctx, "errors/view.html"));
 
 errors.get("/handler", () => {
   throw new Error("Crashing now");
 });
 
+app.route("/env", env);
 app.route("/errors", errors);
 
 export default app;
