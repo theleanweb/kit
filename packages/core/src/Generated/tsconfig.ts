@@ -108,7 +108,7 @@ export function get_tsconfig(
     posixify(Path.relative(output, file));
 
   const include = new Set([
-    "ambient.d.ts",
+    "env.d.ts",
     config_relative("leanweb.d.ts"),
     config_relative("vite.config.ts"),
   ]);
@@ -134,7 +134,7 @@ export function get_tsconfig(
   include.add(config_relative(`${test_folder}/**/*.ts`));
   include.add(config_relative(`${test_folder}/**/*.html`));
 
-  const exclude = [config_relative("node_modules/**"), "./[!ambient.d.ts]**"];
+  const exclude = [config_relative("node_modules/**"), "./[!env.d.ts]**"];
 
   if (Path.extname(config.files.serviceWorker)) {
     exclude.push(config_relative(config.files.serviceWorker));
