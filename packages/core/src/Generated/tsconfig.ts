@@ -3,6 +3,7 @@ import * as Path from "node:path";
 import * as Effect from "effect/Effect";
 import * as Option from "effect/Option";
 import { pipe } from "effect/Function";
+import * as Console from "effect/Console";
 
 import * as FileSystem from "@effect/platform/FileSystem";
 
@@ -228,7 +229,7 @@ function validate_user_config(
         )
       );
 
-      yield* _(Effect.logWarning(`{\n  "extends": "${relative}"\n}`));
+      yield* _(Console.log(`{\n  "extends": "${relative}"\n}`));
     }
   });
 }
