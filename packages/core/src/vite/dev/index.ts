@@ -151,11 +151,11 @@ export async function dev(
       Effect.all([
         Generated.writeEnv(config.outDir, config.env, vite_config.mode),
         Generated.writeConfig(config, generated),
-        Effect.log("Scanning views directory...").pipe(
+        Effect.logInfo("Scanning views directory...").pipe(
           Effect.flatMap(() => core.views),
           Effect.tap((views) => Generated.writeViews(generated, views)),
           Effect.tap((files) =>
-            Effect.log(`Found ${files.length} view files:\n`)
+            Effect.logInfo(`Found ${files.length} view files:\n`)
           ),
           Effect.tap((files) =>
             files.length > 0
