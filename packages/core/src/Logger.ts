@@ -13,7 +13,11 @@ const logLevelColors = {
 
 const SimpleLogger = Logger.make(({ logLevel, message, date }) => {
   const color = logLevelColors[logLevel._tag];
-  console.log(`${color(`${logLevel.label}`)} ${message}`);
+  console.log(
+    `${colors.gray(`[${date.toISOString()}]`)} ${color(
+      `[${logLevel.label}]`
+    )} ${message}`
+  );
 });
 
 export { SimpleLogger as Logger };
