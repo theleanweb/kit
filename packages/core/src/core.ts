@@ -78,40 +78,11 @@ export const Entry = Effect.gen(function* (_) {
 
   return {
     server: Effect.gen(function* (_) {
-      yield* _(Effect.log("Resolving server entry..."));
-
-      const file = yield* _(resolve(config.files.entry));
-
-      if (Option.isNone(file)) {
-        yield* _(Effect.logFatal("No server entry found"));
-      } else {
-        yield* _(
-          Effect.log(`Server entry resolved: ${color.green(file.value)}`)
-        );
-      }
-
-      return file;
+      return yield* _(resolve(config.files.entry));
     }),
     views: Effect.gen(function* (_) {
-      yield* _(Effect.log("Scanning views directory..."));
-
       const files = yield* _(fs.glob("**/*.html", { cwd: config.files.views }));
-
-      yield* _(Effect.log(`Found ${files.length} files:`));
-
-      if (files.length > 0) {
-        yield* _(
-          Effect.log(
-            pipe(
-              files,
-              List.map((file) => color.green(`-> ${file}`)),
-              List.join("\n")
-            )
-          )
-        );
-      }
-
-      return List.map(files, (name) => {
+      return files.map((name) => {
         return { name, file: Path.resolve(config.files.views, name) };
       });
     }),
@@ -133,18 +104,7 @@ export const Entry = Effect.gen(function* (_) {
       );
     }),
     serviceWorker: Effect.gen(function* (_) {
-      yield* _(Effect.log("Resolving service worker..."));
-      const file = yield* _(resolve(config.files.serviceWorker));
-
-      if (Option.isNone(file)) {
-        yield* _(Effect.logWarning("No service worker found"));
-      } else {
-        yield* _(
-          Effect.log(`Service worker resolved: ${color.green(file.value)}`)
-        );
-      }
-
-      return file;
+      return yield* _(resolve(config.files.serviceWorker));
     }),
   };
 });

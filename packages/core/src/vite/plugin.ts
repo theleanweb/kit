@@ -173,23 +173,30 @@ export async function leanweb(user_config?: Config) {
       const is_build = config_env.command === "build";
 
       if (is_build && build_step !== "server") {
-        views = await core.views.pipe(
-          Logger.withMinimumLogLevel(LogLevel.None),
-          runPromise
-        );
+        views = await runPromise(core.views);
 
         input = views.map((file) => file.file);
 
-        await Effect.all([
-          Generated.writeTSConfig(config.outDir, config, cwd),
-          Generated.writeEnv(config.outDir, config.env, config_env.mode),
-          Generated.writeInternal(generated),
-          Generated.writeConfig(config, generated),
-          Generated.writeViews(generated, views),
-        ]).pipe(Logger.withMinimumLogLevel(LogLevel.None), runPromise);
+        await runPromise(
+          Effect.all([
+            Generated.writeTSConfig(config.outDir, config, cwd),
+            Generated.writeEnv(config.outDir, config.env, config_env.mode),
+            Generated.writeInternal(generated),
+            Generated.writeConfig(config, generated),
+            Generated.writeViews(generated, views),
+          ])
+        );
       } else {
         serverEntry = await pipe(
-          core.server,
+          Effect.log("Resolving server entry..."),
+          Effect.flatMap(() => core.server),
+          Effect.tap((entry) =>
+            Option.isSome(entry)
+              ? Effect.log(
+                  `Server entry resolved: ${colors.green(entry.value)}`
+                )
+              : Effect.unit
+          ),
           Logger.withMinimumLogLevel(is_build ? LogLevel.None : LogLevel.All),
           runPromise
         );
@@ -348,10 +355,9 @@ export async function leanweb(user_config?: Config) {
           },
         });
 
-        const [assets_, service_worker] = await Effect.all([
-          core.assets,
-          core.serviceWorker,
-        ]).pipe(Logger.withMinimumLogLevel(LogLevel.None), runPromise);
+        const [assets_, service_worker] = await runPromise(
+          Effect.all([core.assets, core.serviceWorker])
+        );
 
         assets = assets_;
 
@@ -451,9 +457,6 @@ export async function leanweb(user_config?: Config) {
           return pipe(
             assets ? Effect.succeed(assets) : core.assets,
             Effect.map((_) => create_service_worker_module(config, _)),
-            Logger.withMinimumLogLevel(
-              vite_env.command === "build" ? LogLevel.None : LogLevel.All
-            ),
             runPromise
           );
       }

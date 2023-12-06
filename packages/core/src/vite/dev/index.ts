@@ -21,6 +21,8 @@ import * as Logger from "effect/Logger";
 import * as O from "effect/Option";
 import * as Runtime from "effect/Runtime";
 import * as Cause from "effect/Cause";
+import * as Console from "effect/Console";
+import * as List from "effect/ReadonlyArray";
 
 import * as NodeFileSystem from "@effect/platform-node/FileSystem";
 
@@ -149,8 +151,23 @@ export async function dev(
       Effect.all([
         Generated.writeEnv(config.outDir, config.env, vite_config.mode),
         Generated.writeConfig(config, generated),
-        Effect.flatMap(core.views, (views) =>
-          Generated.writeViews(generated, views)
+        Effect.log("Scanning views directory...").pipe(
+          Effect.flatMap(() => core.views),
+          Effect.tap((views) => Generated.writeViews(generated, views)),
+          Effect.tap((files) =>
+            Effect.log(`Found ${files.length} view files:\n`)
+          ),
+          Effect.tap((files) =>
+            files.length > 0
+              ? Console.log(
+                  pipe(
+                    files,
+                    List.map((file) => color.green(`-> ${file.name}`)),
+                    List.join("\n")
+                  )
+                )
+              : Effect.unit
+          )
         ),
       ]),
       Effect.catchAll((error) => {
@@ -275,12 +292,17 @@ export async function dev(
         }
 
         if (decoded === config.paths.base + "/service-worker.js") {
+          yield* _(Effect.log("Resolving service worker..."));
           const resolved = yield* _(core.serviceWorker);
 
           if (O.isSome(resolved)) {
+            yield* _(
+              Effect.log(`Found service worker: ${color.green(resolved.value)}`)
+            );
             res.writeHead(200, { "content-type": "application/javascript" });
             res.end(`import '${to_fs(resolved.value)}';`);
           } else {
+            yield* _(Effect.logWarning("No service worker found"));
             res.writeHead(404);
             res.end("not found");
           }
