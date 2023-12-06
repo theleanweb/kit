@@ -11,6 +11,8 @@ app.get("/", (ctx) => {
 
 app.get("/main", (ctx) => view(ctx, "main", {}));
 
+app.get("/exception", (ctx) => view(ctx, "exception", {}));
+
 app.get("/home", async (ctx) => {
   console.log(getCookie(ctx, "age"));
 

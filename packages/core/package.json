@@ -12,6 +12,7 @@
   "scripts": {
     "dev": "tsc --w",
     "build": "tsc",
+    "test": "vitest",
     "release": "release-it",
     "prepublish": "rimraf dist && pnpm build"
   },
@@ -32,11 +33,13 @@
     "@types/set-cookie-parser": "^2.4.3",
     "connect": "^3.7.0",
     "hono": "^3.9.2",
+    "memfs": "^4.6.0",
     "release-it": "^16.2.1",
     "rimraf": "^5.0.0",
     "rollup": "^3.26.3",
     "typescript": "^5.1.6",
-    "vite": "^4.4.4"
+    "vite": "^4.4.4",
+    "vitest": "^0.32.2"
   },
   "files": [
     "dist",

@@ -35,6 +35,7 @@ import { installPolyfills } from "../../node/polyfills.js";
 import { coalesce_to_error } from "../../utils/error.js";
 import { to_fs } from "../../utils/filesystem.js";
 import { should_polyfill } from "../../utils/platform.js";
+import { prepareError, template } from "./error.js";
 
 const script_file_regex = /\.(js|ts)$/;
 
@@ -355,7 +356,11 @@ export async function dev(
 
         server.onError((err) => {
           console.log("onError: ", err);
-          return new Response("Internal server error", { status: 500 });
+          const error = template(prepareError(err));
+          return new Response(error, {
+            status: 500,
+            headers: { "Content-Type": "text/html" },
+          });
         });
 
         const response = server.fetch(request.value);
