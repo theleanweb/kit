@@ -50,6 +50,8 @@ import * as Generated from "../Generated/index.js";
 import { Logger as SimpleLogger } from "../Logger.js";
 import * as CoreConfig from "../Config/config.js";
 import * as Core from "../Core.js";
+import { module_guard } from "./graph_analysis/index.js";
+import { inspect } from "node:util";
 
 function create_service_worker_module(
   config: ValidatedConfig,
@@ -197,35 +199,32 @@ export async function leanweb(user_config?: Config) {
                 )
               : Effect.unit
           ),
+          Effect.tap(
+            Option.match({
+              onNone: () => {
+                const entry = user_config?.files?.entry;
+                return entry
+                  ? Effect.logFatal(
+                      colors.red(
+                        `Couldn't find the entry point specified in the configuration: ${colors.bold(
+                          entry
+                        )}`
+                      )
+                    )
+                  : Effect.logFatal(
+                      colors.red(
+                        "No server entry point specified, and could not find the default entry point (src/entry.{js,ts,mjs,mts})"
+                      )
+                    );
+              },
+              onSome: (_) => Effect.unit,
+            })
+          ),
           Logger.withMinimumLogLevel(is_build ? LogLevel.None : LogLevel.All),
           runPromise
         );
 
-        if (Option.isNone(serverEntry)) {
-          const entry = user_config?.files?.entry;
-
-          if (entry) {
-            console.log(
-              colors.red(
-                `Couldn't find the entry point specified in the configuration: ${colors.bold(
-                  entry
-                )}`
-              )
-            );
-          } else {
-            console.log(
-              colors.yellow(
-                "No server entry point specified, and could not find the default entry point (src/entry.{js,ts,mjs,mts})"
-              )
-            );
-          }
-
-          // console.log(
-          //   colors.yellow("Please provide a entry point to your server")
-          // );
-
-          process.exit(1);
-        }
+        if (Option.isNone(serverEntry)) process.exit(1);
 
         input = {
           index: serverEntry.value,
@@ -434,6 +433,26 @@ export async function leanweb(user_config?: Config) {
     },
   };
 
+  // Ensures that client-side code can't accidentally import `$env/[static|dynamic]/private` in `*.html` files
+  const plugin_guard: Plugin = {
+    name: "leanweb:vite-plugin-guard",
+
+    writeBundle: {
+      sequential: true,
+      async handler(_options) {
+        // if (vite_config.build.ssr) return;
+
+        const guard = module_guard(this, {
+          cwd: vite.normalizePath(process.cwd()),
+        });
+
+        views.forEach(({ file }) => {
+          guard.check(file);
+        });
+      },
+    },
+  };
+
   const virtual_modules: Plugin = {
     name: "leabweb:plugin-virtual-modules",
     async resolveId(id) {
@@ -442,15 +461,17 @@ export async function leanweb(user_config?: Config) {
         return `\0${id}`;
       }
     },
-    async load(id) {
+    async load(id, options) {
       switch (id) {
         case "\0$env/static/private":
+          // console.log("private: ", id, options);
           return CoreEnv.create_static_module(
             "$env/static/private",
             env.private
           );
 
         case "\0$env/static/public":
+          // console.log("public: ", options);
           return CoreEnv.create_static_module("$env/static/public", env.public);
 
         case "\0$service-worker":
@@ -699,6 +720,7 @@ export async function leanweb(user_config?: Config) {
     setup,
     serve,
     build,
+    plugin_guard,
     strip_svelte,
     restore_script,
     virtual_modules,
