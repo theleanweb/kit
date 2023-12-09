@@ -1,11 +1,5 @@
 import { fileURLToPath } from "node:url";
 
-import {
-  createGlobInterceptor,
-  fromNodeLikeFileSystem,
-} from "glob-interceptor";
-import { Volume, vol } from "memfs";
-
 import { beforeEach, expect, test } from "vitest";
 
 import * as Effect from "effect/Effect";
@@ -22,18 +16,6 @@ import { Config as Schema } from "./Config/schema.js";
 import { Config, Entry } from "./Core.js";
 import { FileSystem } from "./FileSystem.js";
 
-const files = {
-  "./entry.js": "",
-  "./static/favicon.ico": "",
-  "./src/views/empty.html": "",
-};
-
-vol.fromJSON(files);
-
-const interceptor = createGlobInterceptor(
-  fromNodeLikeFileSystem(Volume.fromJSON(files))
-);
-
 const FileSystemLive = Layer.effect(
   FileSystem,
   Effect.gen(function* (_) {
@@ -43,7 +25,7 @@ const FileSystemLive = Layer.effect(
       ...fs,
       glob(pattern, options) {
         return Effect.tryPromise({
-          try: () => glob(pattern, { ...options, ...interceptor }),
+          try: () => glob(pattern, options),
           catch: (e) => e as Error,
         });
       },
