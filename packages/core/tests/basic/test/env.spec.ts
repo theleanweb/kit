@@ -1,5 +1,4 @@
-import { test, expect } from "@playwright/test";
-import { inspect } from "node:util";
+import { expect, test } from "@playwright/test";
 
 const private_static = {
   PRIVATE_STATIC: "accessible to server-side code/replaced at build time",
@@ -10,7 +9,7 @@ const public_static = {
 };
 
 const toString = (env: object) => {
-  return [...Object.entries(private_static)]
+  return [...Object.entries(env)]
     .reduce((acc, [key, value]) => [...acc, `${key}: ${value}`], [] as string[])
     .join("\n");
 };
@@ -22,13 +21,6 @@ test.describe("ENV", () => {
       const json = await response.json();
       expect(json).toEqual(private_static);
     });
-
-    // test("should not get private env in view", async ({ page }) => {
-    //   const response = await page.goto("/env/private/view");
-    //   const html = await response!.text();
-    //   console.log(inspect(html, false, Infinity));
-    //   expect(html).toContain("PRIVATE_STATIC: undefined");
-    // });
   });
 
   test.describe("Public env", () => {
@@ -38,11 +30,10 @@ test.describe("ENV", () => {
       expect(json).toEqual(public_static);
     });
 
-    // test("get public env in view", async ({ page }) => {
-    //   const response = await page.goto("/env/public/view");
-    //   const html = await response!.text();
-    //   console.log("sub: ", public_static);
-    //   expect(html).toContain(toString(public_static));
-    // });
+    test("get public env in view", async ({ page }) => {
+      const response = await page.goto("/env/public/view");
+      const html = await response!.text();
+      expect(html).toContain(toString(public_static));
+    });
   });
 });
