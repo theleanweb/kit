@@ -1,62 +1,38 @@
-import { fs } from "memfs";
+import { fileURLToPath } from "node:url";
 
-import { expect, test, beforeEach } from "vitest";
+import {
+  createGlobInterceptor,
+  fromNodeLikeFileSystem,
+} from "glob-interceptor";
+import { Volume, vol } from "memfs";
+
+import { beforeEach, expect, test } from "vitest";
+
 import * as Effect from "effect/Effect";
 import * as Layer from "effect/Layer";
-import * as Runtime from "effect/Runtime";
 import * as Option from "effect/Option";
+import * as Runtime from "effect/Runtime";
 
-import { PlatformError } from "@effect/platform/Error";
-import * as PlatformFileSystem from "@effect/platform/FileSystem";
 import * as NodeFileSystem from "@effect/platform-node/FileSystem";
+import * as PlatformFileSystem from "@effect/platform/FileSystem";
 
-import { Entry, Config } from "./Core.js";
-import { ValidatedConfig, Config as Schema } from "./Config/schema.js";
+import { glob } from "glob";
+
+import { Config as Schema } from "./Config/schema.js";
+import { Config, Entry } from "./Core.js";
 import { FileSystem } from "./FileSystem.js";
 
-const noop = () => Effect.succeed(void 0);
+const files = {
+  "./entry.js": "",
+  "./static/favicon.ico": "",
+  "./src/views/empty.html": "",
+};
 
-// const NodeFileSystem = Layer.effect(
-//   PlatformFileSystem.FileSystem,
-//   Effect.gen(function* (_) {
-//     return PlatformFileSystem.FileSystem.of({
-//       access: noop,
-//       chmod: noop,
-//       chown: noop,
-//       copy: noop,
-//       copyFile: noop,
-//       exists: () => Effect.succeed(true),
-//       link: noop,
-//       makeDirectory: noop,
-//       makeTempDirectory: () => Effect.succeed(""),
-//       makeTempDirectoryScoped: () => Effect.succeed(""),
-//       makeTempFile: () => Effect.succeed(""),
-//       makeTempFileScoped: () => Effect.succeed(""),
-//       open: (...args) =>
-//         Effect.async((resume) => {
-//           fs.open(...args, (err, v) => {});
-//         }),
-//       readDirectory: () => Effect.succeed([] as string[]),
-//       readFile: () => Effect.succeed(new Uint8Array()),
-//       readFileString: () => Effect.succeed(""),
-//       readLink: () => Effect.succeed(""),
-//       realPath: () => Effect.succeed(""),
-//       remove: () => Effect.succeed(void 0),
-//       rename: () => Effect.succeed(void 0),
-//       stat: (...args) => {
-//         return Effect.try({
-//           try: () => fs.statSync(...args),
-//           catch: (e) => e as PlatformError,
-//         });
-//       },
-//       symlink: () => Effect.succeed(void 0),
-//       truncate: () => Effect.succeed(""),
-//       writeFile: noop,
-//       utimes: noop,
-//       writeFileString: noop,
-//     });
-//   })
-// );
+vol.fromJSON(files);
+
+const interceptor = createGlobInterceptor(
+  fromNodeLikeFileSystem(Volume.fromJSON(files))
+);
 
 const FileSystemLive = Layer.effect(
   FileSystem,
@@ -65,34 +41,34 @@ const FileSystemLive = Layer.effect(
 
     return {
       ...fs,
-      glob(...args) {
-        return Effect.succeed([]);
+      glob(pattern, options) {
+        return Effect.tryPromise({
+          try: () => glob(pattern, { ...options, ...interceptor }),
+          catch: (e) => e as Error,
+        });
       },
     };
   })
 );
 
-const CoreFileSystem = FileSystemLive.pipe(Layer.use(NodeFileSystem.layer));
+const CoreFileSystem = FileSystemLive.pipe(
+  Layer.useMerge(NodeFileSystem.layer)
+);
 
-const config: Schema = {
-  files: {
-    entry: "src/entry.ts",
-    views: "src/views",
-  },
-};
+const views = fileURLToPath(new URL("./fixtures/src/views", import.meta.url));
+const assets = fileURLToPath(new URL("./fixtures/static", import.meta.url));
+const entry = fileURLToPath(new URL("./fixtures/entry.js", import.meta.url));
+
+const config: Schema = { files: { entry, views, assets } };
 
 let core: Effect.Effect.Success<typeof Entry>;
 
 const layer = Layer.mergeAll(
   Layer.succeed(Config, config as any),
-  NodeFileSystem.layer,
   CoreFileSystem
 );
 
 const runtime = Layer.toRuntime(layer).pipe(Effect.scoped, Effect.runSync);
-
-const runFork = Runtime.runFork(runtime);
-const runSync = Runtime.runSync(runtime);
 const runPromise = Runtime.runPromise(runtime);
 
 beforeEach(async () => {
@@ -106,10 +82,10 @@ test("resolve server entry", async () => {
 
 test("resolve views", async () => {
   const views = await runPromise(core.views);
-  expect(views).toEqual([{ name: "", file: "" }]);
+  expect(views.map((_) => _.name)).toEqual(["home.html"]);
 });
 
 test("resolve static files in public directory", async () => {
   const assets = await runPromise(core.assets);
-  expect(assets).toEqual([{ type: "", file: "favicon.ico", size: 0 }]);
+  expect(assets.map((_) => _.file)).toEqual(["favicon.ico"]);
 });

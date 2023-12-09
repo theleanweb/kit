@@ -32,6 +32,7 @@
     "@types/node": "^20.5.1",
     "@types/set-cookie-parser": "^2.4.3",
     "connect": "^3.7.0",
+    "glob-interceptor": "^0.0.3",
     "hono": "^3.9.2",
     "memfs": "^4.6.0",
     "release-it": "^16.2.1",
