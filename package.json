@@ -2,7 +2,7 @@
   "name": "hono-mvc",
   "version": "1.0.0",
   "description": "",
-  "private": false,
+  "private": true,
   "scripts": {
     "test": "pnpm test -r",
     "changeset": "changeset",
