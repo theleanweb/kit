@@ -4,13 +4,3 @@ export function coalesce_to_error(err: unknown) {
     ? (err as Error)
     : new Error(JSON.stringify(err));
 }
-
-export class CompileError {
-  readonly _tag = "CompileError";
-  constructor(readonly cause: any) {}
-}
-
-export class HTMLTransformError {
-  readonly _tag = "HTMLTransformError";
-  constructor(readonly cause: any) {}
-}

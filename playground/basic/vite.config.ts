@@ -8,6 +8,9 @@ export default defineConfig({
     leanweb({
       adapter: adapter(),
       files: {
+        // entry: "src/entry.mts",
+        // // @ts-expect-error
+        // entry: null,
         views: "src/views/pages",
       },
     }),

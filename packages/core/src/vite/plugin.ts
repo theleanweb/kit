@@ -9,15 +9,17 @@ import type {
 } from "vite";
 import * as vite from "vite";
 
-import { compile as compileSvx } from "mdsvex";
-import { compile, preprocess } from "svelte/compiler";
-
-import default_preprocess from "svelte-preprocess";
-
+import * as Effect from "effect/Effect";
 import * as Either from "effect/Either";
 import { pipe } from "effect/Function";
-import * as O from "effect/Option";
-import * as Effect from "effect/Effect";
+import * as Layer from "effect/Layer";
+import * as LogLevel from "effect/LogLevel";
+import * as Logger from "effect/Logger";
+import * as Option from "effect/Option";
+import * as List from "effect/ReadonlyArray";
+import * as Runtime from "effect/Runtime";
+
+import * as NodeFileSystem from "@effect/platform-node/FileSystem";
 
 import * as fs from "node:fs";
 import * as path from "node:path";
@@ -26,30 +28,52 @@ import colors from "kleur";
 import mime from "mime";
 import { dedent } from "ts-dedent";
 
-import { adapt } from "../adapt/index.js";
-import { transform } from "../compiler/html/index.js";
-import { Config, ValidatedConfig } from "../config/schema.js";
-import * as sync from "../sync/index.js";
-import { create_assets } from "../sync/write_views.js";
-import { Asset, BuildData, Env, View } from "../types/internal.js";
-import { VITE_HTML_PLACEHOLDER } from "../utils/constants.js";
-import { CompileError, HTMLTransformError } from "../utils/error.js";
+import { Config, ValidatedConfig } from "../Config/schema.js";
+import { BuildData } from "../types/internal.js";
 import { mkdirp, posixify, rimraf } from "../utils/filesystem.js";
-import { resolveEntry } from "../utils/utils.js";
 import { build_service_worker } from "./build/service_worker.js";
-import { dev } from "./dev/index.js";
-import { preview } from "./preview/index.js";
-import { get_env } from "./utils/env/load.js";
-import { create_static_module } from "./utils/env/resolve.js";
 import { assets_base, logger } from "./utils/index.js";
 
-class ConfigParseError {
-  readonly _tag = "ConfigParseError";
+import { adapt } from "../adapt/index.js";
+
+import { transform } from "../compiler/html/index.js";
+import * as Template from "../compiler/template/index.js";
+
+import { VITE_HTML_PLACEHOLDER } from "../utils/constants.js";
+
+import { dev } from "./dev/index.js";
+import { preview } from "./preview/index.js";
+
+import * as CoreEnv from "../Env/env.js";
+import { FileSystemLive } from "../FileSystem.js";
+import * as Generated from "../Generated/index.js";
+import { Logger as SimpleLogger } from "../Logger.js";
+import * as CoreConfig from "../Config/config.js";
+import * as Core from "../Core.js";
+import { module_guard } from "./graph_analysis/index.js";
+import { inspect } from "node:util";
+
+function create_service_worker_module(
+  config: ValidatedConfig,
+  assets: Array<Core.Asset>
+) {
+  return dedent`
+  if (typeof self === 'undefined' || self instanceof ServiceWorkerGlobalScope === false) {
+    throw new Error('This module can only be imported inside a service worker');
+  }
+  
+  export const files = [
+    ${pipe(
+      assets,
+      List.filter((asset) => config.serviceWorker.files(asset.file)),
+      List.map((asset) => `${s(`${config.paths.base}/${asset.file}`)}`),
+      List.join(",\n")
+    )}
+  ];
+  `;
 }
 
-class NoEntryFileError {
-  readonly _tag = "NoEntryFileError";
-}
+const s = JSON.stringify;
 
 const html_file_regex = /\.html$/;
 
@@ -62,41 +86,59 @@ const vite_client_regex =
 
 const cwd = process.cwd();
 
-const s = JSON.stringify;
-
 let build_step: "client" | "server";
 
-let manifest: { assets: Asset[]; views: View[] };
+let views: Effect.Effect.Success<
+  Effect.Effect.Success<typeof Core.Entry>["views"]
+>;
+
+let assets: Effect.Effect.Success<
+  Effect.Effect.Success<typeof Core.Entry>["assets"]
+> | null = null;
+
+let serverEntry: Effect.Effect.Success<
+  Effect.Effect.Success<typeof Core.Entry>["server"]
+>;
+
+const CoreFileSystem = FileSystemLive.pipe(Layer.use(NodeFileSystem.layer));
 
 export async function leanweb(user_config?: Config) {
-  let vite_env_: ConfigEnv;
+  let vite_env: ConfigEnv;
   let vite_server: ViteDevServer;
-  let vite_config_: ResolvedConfig;
-  let user_vite_config_: UserConfig;
+  let vite_config: ResolvedConfig;
+  let user_vite_config: UserConfig;
 
-  let cwd_env: Env;
+  let env: CoreEnv.Env;
 
   let finalize: () => Promise<void>;
 
-  const parsed_user_config = parse_config(user_config ?? ({} as Config));
+  const config_ = CoreConfig.prepare(user_config, { cwd });
 
-  const resolved_config = pipe(parsed_user_config, Either.map(resolve_config));
-
-  if (Either.isLeft(resolved_config)) {
-    throw resolved_config.left;
+  if (Either.isLeft(config_)) {
+    console.log(colors.red("Invalid config"));
+    console.log(colors.red(String(config_.left.cause.stack)));
+    process.exit(1);
   }
 
-  const config = resolved_config.right;
+  const config = config_.right;
 
-  const entry = Effect.runSync(resolveEntry(config.files.entry));
+  const layer = Layer.mergeAll(
+    Logger.replace(Logger.defaultLogger, SimpleLogger),
+    Layer.succeed(Core.Config, config),
+    NodeFileSystem.layer,
+    CoreFileSystem
+  );
 
-  if (O.isNone(entry)) {
-    throw new NoEntryFileError();
-  }
+  const runtime = Layer.toRuntime(layer).pipe(Effect.scoped, Effect.runSync);
 
-  const service_worker_file = resolveEntry(config.files.serviceWorker);
+  const runFork = Runtime.runFork(runtime);
+  const runSync = Runtime.runSync(runtime);
+  const runPromise = Runtime.runPromise(runtime);
 
-  const entry_file = entry.value;
+  const core = await Core.Entry.pipe(
+    Logger.withMinimumLogLevel(LogLevel.None),
+    runPromise
+  );
 
   const root_output_directory = config.outDir;
   const output_directory = `${root_output_directory}/output`;
@@ -112,32 +154,82 @@ export async function leanweb(user_config?: Config) {
     relative_path.includes(root_output_directory);
 
   const setup: Plugin = {
-    name: "setup",
+    name: "leanweb:plugin-setup",
     configResolved(config) {
-      vite_config_ = config;
+      vite_config = config;
     },
     configureServer(server) {
       vite_server = server;
-      return dev(server, vite_config_, config);
+      return dev(server, vite_config, config);
     },
     configurePreviewServer(vite) {
-      return preview(vite, vite_config_, config);
+      return preview(vite, vite_config, config);
     },
-    async config(vite_config, vite_config_env) {
-      vite_env_ = vite_config_env;
-      user_vite_config_ = vite_config;
+    async config(vite_config, config_env) {
+      vite_env = config_env;
+      user_vite_config = vite_config;
 
-      const is_build = vite_config_env.command === "build";
-
-      cwd_env = get_env(config.env, vite_config_env.mode);
+      env = CoreEnv.get_env(config.env, config_env.mode);
 
       let input: InputOption;
+      const is_build = config_env.command === "build";
 
       if (is_build && build_step !== "server") {
-        manifest = sync.all(config, vite_config_env.mode);
-        input = manifest.views.map((view) => view.file);
+        views = await runPromise(core.views);
+
+        input = views.map((file) => file.file);
+
+        await runPromise(
+          Effect.all([
+            Generated.writeTSConfig(config.outDir, config, cwd),
+            Generated.writeEnv(config.outDir, config.env, config_env.mode),
+            Generated.writeInternal(generated),
+            Generated.writeConfig(config, generated),
+            Generated.writeViews(generated, views),
+          ])
+        );
       } else {
-        input = { index: entry_file, internal: `${generated}/internal.js` };
+        serverEntry = await pipe(
+          Effect.log("Resolving server entry..."),
+          Effect.flatMap(() => core.server),
+          Effect.tap((entry) =>
+            Option.isSome(entry)
+              ? Effect.log(
+                  `Server entry resolved: ${colors.green(entry.value)}`
+                )
+              : Effect.unit
+          ),
+          Effect.tap(
+            Option.match({
+              onNone: () => {
+                const entry = user_config?.files?.entry;
+                return entry
+                  ? Effect.logFatal(
+                      colors.red(
+                        `Couldn't find the entry point specified in the configuration: ${colors.bold(
+                          entry
+                        )}`
+                      )
+                    )
+                  : Effect.logFatal(
+                      colors.red(
+                        "No server entry point specified, and could not find the default entry point (src/entry.{js,ts,mjs,mts})"
+                      )
+                    );
+              },
+              onSome: (_) => Effect.unit,
+            })
+          ),
+          Logger.withMinimumLogLevel(is_build ? LogLevel.None : LogLevel.All),
+          runPromise
+        );
+
+        if (Option.isNone(serverEntry)) process.exit(1);
+
+        input = {
+          index: serverEntry.value,
+          internal: `${generated}/internal.js`,
+        };
       }
 
       const ssr = build_step === "server";
@@ -155,6 +247,7 @@ export async function leanweb(user_config?: Config) {
 
       return {
         root: cwd,
+        appType: "custom",
         publicDir: config.files.assets,
         base: !ssr ? assets_base(config) : "./",
         ssr: {
@@ -171,7 +264,7 @@ export async function leanweb(user_config?: Config) {
           },
           watch: {
             ignored: [
-              // Ignore all siblings of config.kit.outDir/generated
+              // Ignore all siblings of config.outDir/generated
               `${posixify(config.outDir)}/!(generated)`,
             ],
           },
@@ -183,7 +276,7 @@ export async function leanweb(user_config?: Config) {
           exclude: [
             "leanweb-kit",
             // exclude kit features so that libraries using them work even when they are prebundled
-            // this does not affect app code, just handling of imported libraries that use $app or $env
+            // this does not affect app code, just handling of imported libraries that use $env
             "$env",
           ],
         },
@@ -205,9 +298,9 @@ export async function leanweb(user_config?: Config) {
           manifest: "vite-manifest.json",
           target: ssr ? "node16.14" : undefined,
           cssMinify:
-            user_vite_config_.build?.minify == null
+            user_vite_config.build?.minify == null
               ? true
-              : !!user_vite_config_.build.minify,
+              : !!user_vite_config.build.minify,
           rollupOptions: {
             input,
             output: {
@@ -226,8 +319,8 @@ export async function leanweb(user_config?: Config) {
     buildStart() {
       if (build_step === "server") return;
 
-      if (vite_env_.command === "build") {
-        if (!vite_config_.build.watch) rimraf(output_directory);
+      if (vite_env.command === "build") {
+        if (!vite_config.build.watch) rimraf(output_directory);
         mkdirp(output_directory);
       }
     },
@@ -242,37 +335,32 @@ export async function leanweb(user_config?: Config) {
       if (build_step !== "server") {
         build_step = "server";
 
-        const verbose = vite_config_.logLevel === "info";
+        const verbose = vite_config.logLevel === "info";
         const log = logger({ verbose });
-
-        const build_data: BuildData = {
-          app_dir: config.appDir,
-          assets: manifest.assets,
-          app_path: `${config.paths.base.slice(1)}${
-            config.paths.base ? "/" : ""
-          }${config.appDir}`,
-          service_worker: service_worker_file ? "service-worker.js" : null,
-        };
 
         // Initiate second build step that builds the final server output
         await vite.build({
-          mode: vite_env_.mode,
-          logLevel: vite_config_.logLevel,
-          configFile: vite_config_.configFile,
-          clearScreen: vite_config_.clearScreen,
+          mode: vite_env.mode,
+          logLevel: vite_config.logLevel,
+          configFile: vite_config.configFile,
+          clearScreen: vite_config.clearScreen,
           optimizeDeps: {
-            force: vite_config_.optimizeDeps.force,
+            force: vite_config.optimizeDeps.force,
           },
           build: {
-            minify: user_vite_config_.build?.minify,
-            sourcemap: vite_config_.build.sourcemap,
-            assetsInlineLimit: vite_config_.build.assetsInlineLimit,
+            minify: user_vite_config.build?.minify,
+            sourcemap: vite_config.build.sourcemap,
+            assetsInlineLimit: vite_config.build.assetsInlineLimit,
           },
         });
 
-        const service_worker = Effect.runSync(service_worker_file);
+        const [assets_, service_worker] = await runPromise(
+          Effect.all([core.assets, core.serviceWorker])
+        );
 
-        if (O.isSome(service_worker)) {
+        assets = assets_;
+
+        if (Option.isSome(service_worker)) {
           if (config.paths.assets) {
             throw new Error(
               "Cannot use service worker alongside config.paths.assets"
@@ -283,42 +371,47 @@ export async function leanweb(user_config?: Config) {
 
           const client_manifest = JSON.parse(
             fs.readFileSync(
-              `${output_directory}/client/${vite_config_.build.manifest}`,
+              `${output_directory}/client/${vite_config.build.manifest}`,
               "utf-8"
             )
           ) as Manifest;
 
-          const files = [...Object.values(client_manifest)].map(({ file }) => {
-            const type = mime.getType(file);
-            const url = path.resolve(views_out_directory, file);
-            return { file, type, size: fs.statSync(url).size };
-          });
+          // const files = [...Object.values(client_manifest)].map(({ file }) => {
+          //   const type = mime.getType(file);
+          //   const url = path.resolve(views_out_directory, file);
+          //   return { file, type, size: fs.statSync(url).size };
+          // });
 
           await build_service_worker(
             output_directory,
             config,
-            vite_config_,
-            [...manifest.assets, ...files],
+            vite_config,
+            {
+              static: assets,
+              assets: [...Object.values(client_manifest)].map((_) => _.file),
+            },
             service_worker.value
           );
         }
 
+        const build_data: BuildData = {
+          assets,
+          app_dir: config.appDir,
+          app_path: `${config.paths.base.slice(1)}${
+            config.paths.base ? "/" : ""
+          }${config.appDir}`,
+          service_worker: Option.isSome(service_worker)
+            ? "service-worker.js"
+            : null,
+        };
+
         // we need to defer this to closeBundle, so that adapters copy files
         // created by other Vite plugins
         finalize = async () => {
-          console.log(
-            `\nRun ${colors
-              .bold()
-              .cyan(
-                "npm run preview"
-              )} to preview your production build locally.`
-          );
+          const cmd = colors.bold().cyan("npm run preview");
+          console.log(`\nRun ${cmd} to preview your production build locally.`);
 
-          if (Either.isRight(parsed_user_config)) {
-            rimraf(
-              `${views_out_directory}/${parsed_user_config.right.files.views}`
-            );
-          }
+          rimraf(`${views_out_directory}/${config.files.views}`);
 
           if (config.adapter) {
             await adapt(config, build_data, log);
@@ -340,33 +433,62 @@ export async function leanweb(user_config?: Config) {
     },
   };
 
+  // Ensures that client-side code can't accidentally import `$env/[static|dynamic]/private` in `*.html` files
+  const plugin_guard: Plugin = {
+    name: "leanweb:vite-plugin-guard",
+
+    writeBundle: {
+      sequential: true,
+      async handler(_options) {
+        // if (vite_config.build.ssr) return;
+
+        const guard = module_guard(this, {
+          cwd: vite.normalizePath(process.cwd()),
+        });
+
+        views.forEach(({ file }) => {
+          guard.check(file);
+        });
+      },
+    },
+  };
+
   const virtual_modules: Plugin = {
-    name: "virtual-modules",
+    name: "leabweb:plugin-virtual-modules",
     async resolveId(id) {
       // treat $env/static/[public|private] as virtual
       if (id.startsWith("$env/") || id === "$service-worker") {
         return `\0${id}`;
       }
     },
-    async load(id) {
+    async load(id, options) {
       switch (id) {
         case "\0$env/static/private":
-          return create_static_module("$env/static/private", cwd_env.private);
+          // console.log("private: ", id, options);
+          return CoreEnv.create_static_module(
+            "$env/static/private",
+            env.private
+          );
 
         case "\0$env/static/public":
-          return create_static_module("$env/static/public", cwd_env.public);
+          // console.log("public: ", options);
+          return CoreEnv.create_static_module("$env/static/public", env.public);
 
         case "\0$service-worker":
-          return create_service_worker_module(config);
+          return pipe(
+            assets ? Effect.succeed(assets) : core.assets,
+            Effect.map((_) => create_service_worker_module(config, _)),
+            runPromise
+          );
       }
     },
   };
 
   // Walk html file and attach the source file name for each asset in the html file, so that
   // we can accurately identify and serve them during dev
-  const compile_serve: Plugin = {
+  const serve: Plugin = {
     apply: "serve",
-    name: "plugin-compile-dev",
+    name: "leanweb:plugin-dev",
     // resolveId: {
     //   order: "pre",
     //   async handler(source, importer, options) {
@@ -394,96 +516,66 @@ export async function leanweb(user_config?: Config) {
       if (!id.endsWith(html_postfix)) return;
       return fs.readFileSync(id.replace(html_postfix_regex, ""), "utf-8");
     },
-    async transform(html, id_) {
-      const id = id_.endsWith(html_postfix)
-        ? id_.replace(html_postfix_regex, "")
-        : id_;
+    async transform(html, id) {
+      const filename = id.endsWith(html_postfix)
+        ? id.replace(html_postfix_regex, "")
+        : id;
 
-      if (html_file_regex.test(id)) {
+      if (html_file_regex.test(filename)) {
         const program = Effect.gen(function* ($) {
-          const display_id = id.replace(cwd, "");
+          const short_file = filename.replace(cwd, "");
 
-          yield* $(Effect.log(`compiling ${display_id}`));
+          yield* $(Effect.log(`compiling ${short_file}`));
 
           const code = yield* $(
-            isMarkdown(id)
-              ? pipe(
-                  Effect.tryPromise({
-                    try: () => compileSvx(html),
-                    catch: (e) => new CompileError(e as any),
-                  }),
-                  Effect.flatMap(O.fromNullable),
-                  Effect.map((_) => _.code),
-                  Effect.catchTag("NoSuchElementException", () =>
-                    Effect.succeed(html)
-                  )
-                )
-              : Effect.succeed(html)
-          );
-
-          const trnx_code = yield* $(transform(code, { cwd, filename: id }));
-
-          const vite_html = yield* $(
-            Effect.tryPromise({
-              try: () => vite_server.transformIndexHtml(id, trnx_code),
-              catch: (e) => new HTMLTransformError(e as any),
+            Effect.if(isMarkdown(filename), {
+              onFalse: Effect.succeed(html),
+              onTrue: pipe(
+                Template.markdown.compile(html),
+                Effect.map(Option.map(({ code }) => code)),
+                Effect.map(Option.getOrElse(() => html))
+              ),
             })
           );
 
-          /** Remove vite client just incase we have a component that has a svelte script with minimal html, cause
-           * there'll be no head for vite to inject the vite client script. Which means we'll have two script tags
-           * at the beginning of the file, which means the svelte compiler will throw an error
-           **/
-          const without_vite_client = vite_html.replace(
-            vite_client_regex,
-            () => ""
+          const without_vite_client = yield* $(
+            transform(code, { cwd, filename }),
+            Effect.flatMap((code) =>
+              Effect.promise(() =>
+                vite_server.transformIndexHtml(filename, code)
+              )
+            ),
+            /** Remove vite client just incase we have a component that has a svelte script with minimal html, cause
+             * there'll be no head for vite to inject the vite client script. Which means we'll have two script tags
+             * at the beginning of the file, which means the svelte compiler will throw an error
+             **/
+            Effect.map((html) => html.replace(vite_client_regex, () => ""))
           );
 
-          const preprocessed = yield* $(
-            Effect.tryPromise({
-              try: () =>
-                preprocess(
-                  without_vite_client,
-                  // @ts-expect-error
-                  [default_preprocess()],
-                  { filename: id }
-                ),
-              catch: (e) => new CompileError(e as any),
-            })
+          return yield* $(
+            Template.svelte.preprocess(without_vite_client, { filename }),
+            Effect.flatMap((_) =>
+              Template.svelte.compile(_.code, {
+                filename,
+                dev: true,
+                sourcemap: _.map,
+              })
+            ),
+            Effect.tap(() => Effect.log(`compiled ${short_file}`))
           );
+        });
 
-          const component = yield* $(
-            Effect.try({
-              try: () =>
-                compile(preprocessed.code, {
-                  dev: true,
-                  filename: id,
-                  generate: "ssr",
-                }),
-              catch: (e) => new CompileError(e as any),
-            })
-          );
+        const result = await runPromise(program);
 
-          yield* $(Effect.log(`compiled ${display_id}`));
-
-          return component;
-        }).pipe(Effect.withLogSpan("time"));
-
-        const result = await pipe(program, Effect.either, Effect.runPromise);
-
-        if (Either.isLeft(result)) {
-          throw result.left;
-        }
-
-        return result.right.js;
+        return result.js;
       }
     },
   };
 
-  const resolve_build: Plugin = {
+  const build: Plugin = {
     apply: "build",
     enforce: "pre",
-    name: "plugin-resolve-build",
+    name: "leanweb:plugin-build",
     async resolveId(source, importer, options) {
       if (build_step === "server" && importer && html_file_regex.test(source)) {
         let res = await this.resolve(source, importer, {
@@ -547,9 +639,7 @@ export async function leanweb(user_config?: Config) {
 
         // The generated svelte component imports svelte internals, which means we'll not be able
         // to resolve it from the src directory. And should also take care of any node_modules import
-        if (fs.existsSync(resolved)) {
-          return resolved;
-        }
+        if (fs.existsSync(resolved)) return resolved;
       }
     },
     load(id) {
@@ -561,20 +651,24 @@ export async function leanweb(user_config?: Config) {
 
       const clean_id = id.replace(html_postfix_regex, "");
 
-      let code_ = code;
+      const result = await pipe(
+        Effect.if(isMarkdown(clean_id), {
+          onFalse: Effect.succeed(code),
+          onTrue: Template.markdown
+            .compile(code)
+            .pipe(
+              Effect.map(Option.map(({ code }) => code)),
+              Effect.map(Option.getOrElse(() => code))
+            ),
+        }),
+        Effect.flatMap((code) =>
+          Template.svelte.preprocess(code, { filename: id })
+        ),
+        Effect.flatMap(({ code }) => Template.svelte.compile(code)),
+        Effect.runPromise
+      );
 
-      if (isMarkdown(clean_id)) {
-        const result = await compileSvx(code_);
-        if (result) code_ = result.code;
-      }
-
-      // @ts-expect-error
-      const preprocessed = await preprocess(code_, [default_preprocess()], {
-        filename: id,
-      });
-
-      const res = compile(preprocessed.code, { generate: "ssr" });
-      return res.js;
+      return result.js;
     },
   };
 
@@ -604,7 +698,7 @@ export async function leanweb(user_config?: Config) {
   // Add an obfuscator so that vite's html parser doesn't error when it sees a script tag
   // at the beginning of the document
   const strip_svelte: Plugin = {
-    name: "plugin-strip-svelte",
+    name: "leanweb:plugin-strip",
     transformIndexHtml: {
       order: "pre",
       handler(html) {
@@ -616,7 +710,7 @@ export async function leanweb(user_config?: Config) {
   // Remove the above obfuscator
   const restore_script: Plugin = {
     enforce: "post",
-    name: "plugin-restore-svelte",
+    name: "leanweb:plugin-restore",
     transformIndexHtml(html) {
       return html.replace(`${VITE_HTML_PLACEHOLDER}\n`, "");
     },
@@ -624,8 +718,9 @@ export async function leanweb(user_config?: Config) {
 
   return [
     setup,
-    compile_serve,
-    resolve_build,
+    serve,
+    build,
+    plugin_guard,
     strip_svelte,
     restore_script,
     virtual_modules,
@@ -637,43 +732,4 @@ export async function leanweb(user_config?: Config) {
 function isMarkdown(filename: string) {
   const { name } = path.parse(filename);
   return name.endsWith(".md");
-}
-
-function parse_config(config: Config) {
-  const result = Config.safeParse(config);
-  return result.success
-    ? Either.right(result.data as ValidatedConfig)
-    : Either.left(new ConfigParseError());
-}
-
-function resolve_config(config: ValidatedConfig) {
-  const _config = { ...config };
-
-  _config.outDir = path.join(cwd, config.outDir);
-  _config.files.entry = path.join(cwd, config.files.entry);
-  _config.files.views = path.join(cwd, config.files.views);
-
-  for (const k in config.files) {
-    const key = k as keyof typeof config.files;
-    _config.files[key] = path.resolve(cwd, config.files[key]);
-  }
-
-  return _config;
-}
-
-function create_service_worker_module(config: ValidatedConfig) {
-  const assets = Effect.runSync(create_assets(config));
-
-  return dedent`
-  if (typeof self === 'undefined' || self instanceof ServiceWorkerGlobalScope === false) {
-    throw new Error('This module can only be imported inside a service worker');
-  }
-  
-  export const files = [
-    ${assets
-      .filter((asset) => config.serviceWorker.files(asset.file))
-      .map((asset) => `${s(`${config.paths.base}/${asset.file}`)}`)
-      .join(",\n")}
-  ];
-`;
 }

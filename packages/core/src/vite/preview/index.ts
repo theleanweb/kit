@@ -12,7 +12,7 @@ import { ResolvedConfig } from "vite";
 
 import { Hono } from "hono";
 
-import { ValidatedConfig } from "../../config/schema.js";
+import { ValidatedConfig } from "../../Config/schema.js";
 import { getRequest, setResponse } from "../../node/index.js";
 import { installPolyfills } from "../../node/polyfills.js";
 import { should_polyfill } from "../../utils/platform.js";
@@ -63,13 +63,10 @@ export async function preview(
     vite.middlewares.use(async (req, res) => {
       const host = req.headers["host"];
 
-      let request;
+      let request: Request | undefined;
 
       try {
-        request = await getRequest({
-          base: `${protocol}://${host}`,
-          request: req,
-        });
+        request = getRequest({ base: `${protocol}://${host}`, request: req });
       } catch (err: any) {
         res.statusCode = err.status || 400;
         return res.end("Invalid request body");

@@ -1,8 +1,55 @@
-import { GENERATED_COMMENT } from "../../../utils/constants.js";
-import { Env } from "../../../types/internal.js";
-import { dedent } from "ts-dedent";
+import { ValidatedConfig } from "../Config/schema.js";
+import { loadEnv } from "vite";
 
-type EnvType = "public" | "private";
+import { dedent } from "ts-dedent";
+import { reserved, valid_identifier } from "./constant.js";
+import { GENERATED_COMMENT } from "../utils/constants.js";
+
+export interface Env {
+  public: Record<string, string>;
+  private: Record<string, string>;
+}
+
+type PublicPrivate = { public_prefix: string; private_prefix: string };
+
+function filter_private_env(
+  env: Record<string, string>,
+  { public_prefix, private_prefix }: PublicPrivate
+) {
+  return Object.fromEntries(
+    Object.entries(env).filter(
+      ([k]) =>
+        k.startsWith(private_prefix) &&
+        (public_prefix === "" || !k.startsWith(public_prefix))
+    )
+  );
+}
+
+function filter_public_env(
+  env: Record<string, string>,
+  { public_prefix, private_prefix }: PublicPrivate
+) {
+  return Object.fromEntries(
+    Object.entries(env).filter(
+      ([k]) =>
+        k.startsWith(public_prefix) &&
+        (private_prefix === "" || !k.startsWith(private_prefix))
+    )
+  );
+}
+
+// Load environment variables from process.env and .env files
+export function get_env(env_config: ValidatedConfig["env"], mode: string) {
+  const { publicPrefix: public_prefix, privatePrefix: private_prefix } =
+    env_config;
+
+  const env = loadEnv(mode, env_config.dir, "");
+
+  return {
+    public: filter_public_env(env, { public_prefix, private_prefix }),
+    private: filter_private_env(env, { public_prefix, private_prefix }),
+  };
+}
 
 export function create_static_module(id: string, env: Record<string, string>) {
   const declarations: string[] = [];
@@ -21,6 +68,8 @@ export function create_static_module(id: string, env: Record<string, string>) {
   return GENERATED_COMMENT + declarations.join("\n\n");
 }
 
+type EnvType = "public" | "private";
+
 export function create_static_types(id: EnvType, env: Env) {
   const declarations = Object.keys(env[id])
     .filter((k) => valid_identifier.test(k))
@@ -36,10 +85,7 @@ export function create_static_types(id: EnvType, env: Env) {
 export function create_dynamic_types(
   id: EnvType,
   env: Env,
-  {
-    public_prefix,
-    private_prefix,
-  }: { public_prefix: string; private_prefix: string }
+  { public_prefix, private_prefix }: PublicPrivate
 ) {
   const properties = Object.keys(env[id])
     .filter((k) => valid_identifier.test(k))
@@ -70,56 +116,3 @@ export function create_dynamic_types(
 		}
 	`;
 }
-
-export const reserved = new Set([
-  "do",
-  "if",
-  "in",
-  "for",
-  "let",
-  "new",
-  "try",
-  "var",
-  "case",
-  "else",
-  "enum",
-  "eval",
-  "null",
-  "this",
-  "true",
-  "void",
-  "with",
-  "await",
-  "break",
-  "catch",
-  "class",
-  "const",
-  "false",
-  "super",
-  "throw",
-  "while",
-  "yield",
-  "delete",
-  "export",
-  "import",
-  "public",
-  "return",
-  "static",
-  "switch",
-  "typeof",
-  "default",
-  "extends",
-  "finally",
-  "package",
-  "private",
-  "continue",
-  "debugger",
-  "function",
-  "arguments",
-  "interface",
-  "protected",
-  "implements",
-  "instanceof",
-]);
-
-export const valid_identifier = /^[a-zA-Z_$][a-zA-Z0-9_$]*$/;

@@ -13,8 +13,8 @@
   "author": "Joshua Amaju",
   "license": "ISC",
   "devDependencies": {
-    "@leanweb-kit/adapter-vercel": "workspace:*",
     "@leanweb-kit/adapter-cloudflare": "workspace:*",
+    "@leanweb-kit/adapter-vercel": "workspace:*",
     "@types/node": "^20.4.2",
     "autoprefixer": "^10.4.14",
     "leanweb-kit": "workspace:*",

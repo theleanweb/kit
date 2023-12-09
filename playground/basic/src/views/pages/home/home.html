@@ -1,5 +1,9 @@
 <script>
   import Footer from "./footer.html";
+
+  import { API_URL, PRIVATE_API_URL } from "$env/static/private";
+
+  console.log("view: ", API_URL, PRIVATE_API_URL);
 </script>
 
 <!DOCTYPE html>
@@ -16,6 +20,18 @@
       <div>
         <p>Hello</p>
       </div>
+
+      <form action="/home" method="post">
+        <input type="text" name="age" value="1" />
+      </form>
+
+      <!-- {#if a}
+        <p>hello</p>
+      {/if} -->
+
+      <!-- {#if b $ 10}
+        <p>hello</p>
+      {/if} -->
 
       <img src="./img.png" />
 

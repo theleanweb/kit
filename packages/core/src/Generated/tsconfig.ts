@@ -1,27 +1,29 @@
-import * as fs from "node:fs";
-import * as path from "node:path";
+import * as Path from "node:path";
+
+import * as Effect from "effect/Effect";
+import * as Option from "effect/Option";
+import { pipe } from "effect/Function";
+import * as Console from "effect/Console";
+
+import * as FileSystem from "@effect/platform/FileSystem";
+
 import colors from "kleur";
 import ts from "typescript";
 
-import * as O from "effect/Option";
-
-import { write_if_changed } from "./utils.js";
+import { write_if_changed } from "../utils.js";
 import { posixify } from "../utils/filesystem.js";
-import { ValidatedConfig } from "../config/schema.js";
+import { ValidatedConfig } from "../Config/schema.js";
 
 function maybe_file(cwd: string, file: string) {
-  const resolved = path.resolve(cwd, file);
+  const resolved = Path.resolve(cwd, file);
 
-  if (fs.existsSync(resolved)) {
-    return O.some(resolved);
-  }
-
-  return O.none();
+  return pipe(
+    Effect.flatMap(FileSystem.FileSystem, (fs) => fs.exists(resolved)),
+    Effect.map((exists) => (exists ? Option.some(resolved) : Option.none()))
+  );
 }
 
-function project_relative(file: string) {
-  return posixify(path.relative(".", file));
-}
+const project_relative = (file: string) => posixify(Path.relative(".", file));
 
 function remove_trailing_slashstar(file: string) {
   if (file.endsWith("/*")) {
@@ -32,73 +34,90 @@ function remove_trailing_slashstar(file: string) {
 }
 
 // Generates the tsconfig that the user's tsconfig inherits from.
-export function write_tsconfig(config: ValidatedConfig, cwd = process.cwd()) {
-  const out = path.join(config.outDir, "tsconfig.json");
+export function writeTSConfig(
+  output: string,
+  config: ValidatedConfig,
+  cwd = process.cwd()
+) {
+  return Effect.gen(function* (_) {
+    const user_config = yield* _(load_user_tsconfig(cwd));
 
-  const user_config = load_user_tsconfig(cwd);
-  if (user_config) validate_user_config(config, cwd, out, user_config);
+    const out = Path.join(output, "tsconfig.json");
 
-  // only specify baseUrl if a) the user doesn't specify their own baseUrl
-  // and b) they have non-relative paths. this causes problems with auto-imports,
-  // so we print a suggestion that they use relative paths instead
-  // TODO(v2): never include base URL, and skip the check below
-  let include_base_url = false;
+    if (user_config) yield* _(validate_user_config(cwd, out, user_config));
 
-  if (user_config && !user_config.options.compilerOptions?.baseUrl) {
-    const non_relative_paths = new Set();
+    // only specify baseUrl if a) the user doesn't specify their own baseUrl
+    // and b) they have non-relative paths. this causes problems with auto-imports,
+    // so we print a suggestion that they use relative paths instead
+    // TODO(v2): never include base URL, and skip the check below
+    let include_base_url = false;
 
-    for (const paths of Object.values(
-      user_config?.options.compilerOptions?.paths || {}
-    )) {
-      for (const path of paths as any) {
-        if (!path.startsWith(".")) non_relative_paths.add(path);
+    if (user_config && !user_config.options.compilerOptions?.baseUrl) {
+      const non_relative_paths = new Set();
+
+      for (const paths of Object.values(
+        user_config?.options.compilerOptions?.paths || {}
+      )) {
+        for (const path of paths as any) {
+          if (!path.startsWith(".")) non_relative_paths.add(path);
+        }
+      }
+
+      if (non_relative_paths.size) {
+        include_base_url = true;
+
+        yield* _(
+          Effect.log(
+            colors
+              .bold()
+              .yellow("Please replace non-relative compilerOptions.paths:\n")
+          )
+        );
+
+        for (const path of non_relative_paths) {
+          yield* _(Effect.log(`  - "${path}" -> "./${path}"`));
+        }
+
+        yield* _(
+          Effect.log(
+            '\nDoing so allows us to omit "baseUrl" — which causes problems with imports — from the generated tsconfig.json. See https://github.com/theleanweb/kit/pull/8437 for more information.'
+          )
+        );
       }
     }
 
-    if (non_relative_paths.size) {
-      include_base_url = true;
-
-      console.log(
-        colors
-          .bold()
-          .yellow("Please replace non-relative compilerOptions.paths:\n")
-      );
-
-      for (const path of non_relative_paths) {
-        console.log(`  - "${path}" -> "./${path}"`);
-      }
-
-      console.log(
-        '\nDoing so allows us to omit "baseUrl" — which causes problems with imports — from the generated tsconfig.json. See https://github.com/sveltejs/kit/pull/8437 for more information.'
-      );
-    }
-  }
-
-  write_if_changed(
-    out,
-    JSON.stringify(get_tsconfig(config, include_base_url), null, "\t")
-  );
+    yield* _(
+      write_if_changed(
+        out,
+        JSON.stringify(
+          get_tsconfig(output, config, include_base_url),
+          null,
+          "\t"
+        )
+      )
+    );
+  });
 }
 
 // Generates the tsconfig that the user's tsconfig inherits from.
 export function get_tsconfig(
+  output: string,
   config: ValidatedConfig,
   include_base_url: boolean
 ) {
   const config_relative = (file: string) =>
-    posixify(path.relative(config.outDir, file));
+    posixify(Path.relative(output, file));
 
   const include = new Set([
-    "ambient.d.ts",
-    "./types/**/$types.d.ts",
+    "env.d.ts",
     config_relative("leanweb.d.ts"),
     config_relative("vite.config.ts"),
   ]);
 
   // TODO(v2): find a better way to include all src files. We can't just use routes/lib only because
   // people might have other folders/files in src that they want included.
-  const src_includes = [path.resolve("src")].filter((dir) => {
-    const relative = path.relative(path.resolve("src"), dir);
+  const src_includes = [Path.resolve("src")].filter((dir) => {
+    const relative = Path.relative(Path.resolve("src"), dir);
     return !relative || relative.startsWith("..");
   });
 
@@ -116,9 +135,9 @@ export function get_tsconfig(
   include.add(config_relative(`${test_folder}/**/*.ts`));
   include.add(config_relative(`${test_folder}/**/*.html`));
 
-  const exclude = [config_relative("node_modules/**"), "./[!ambient.d.ts]**"];
+  const exclude = [config_relative("node_modules/**"), "./[!env.d.ts]**"];
 
-  if (path.extname(config.files.serviceWorker)) {
+  if (Path.extname(config.files.serviceWorker)) {
     exclude.push(config_relative(config.files.serviceWorker));
   } else {
     exclude.push(config_relative(`${config.files.serviceWorker}.js`));
@@ -162,50 +181,57 @@ export function get_tsconfig(
 }
 
 function load_user_tsconfig(cwd: string) {
-  const file =
-    maybe_file(cwd, "tsconfig.json") || maybe_file(cwd, "jsconfig.json");
+  return Effect.gen(function* (_) {
+    const file = yield* _(
+      maybe_file(cwd, "tsconfig.json"),
+      Effect.orElse(() => maybe_file(cwd, "jsconfig.json"))
+    );
 
-  if (O.isNone(file)) return;
+    if (Option.isNone(file)) return;
 
-  // we have to eval the file, since it's not parseable as JSON (contains comments)
-  const json = fs.readFileSync(file.value, "utf-8");
+    const fs = yield* _(FileSystem.FileSystem);
 
-  return { kind: path.basename(file.value), options: (0, eval)(`(${json})`) };
+    // we have to eval the file, since it's not parseable as JSON (contains comments)
+    const json = fs.readFileString(file.value, "utf-8");
+
+    return { kind: Path.basename(file.value), options: (0, eval)(`(${json})`) };
+  });
 }
 
 function validate_user_config(
-  config: ValidatedConfig,
   cwd: string,
   out: string,
   tsconfig: { kind: string; options: any }
 ) {
-  // we need to check that the user's tsconfig extends the framework config
-  const extend = tsconfig.options.extends;
+  return Effect.gen(function* (_) {
+    // we need to check that the user's tsconfig extends the framework config
+    const extend = tsconfig.options.extends;
 
-  const extends_framework_config =
-    typeof extend === "string"
-      ? path.resolve(cwd, extend) === out
-      : Array.isArray(extend)
-      ? extend.some((e) => path.resolve(cwd, e) === out)
-      : false;
+    const extends_framework_config =
+      typeof extend === "string"
+        ? Path.resolve(cwd, extend) === out
+        : Array.isArray(extend)
+        ? extend.some((e) => Path.resolve(cwd, e) === out)
+        : false;
 
-  // const options = tsconfig.options.compilerOptions || {};
+    if (!extends_framework_config) {
+      let relative = posixify(Path.relative(".", out));
 
-  if (!extends_framework_config) {
-    let relative = posixify(path.relative(".", out));
+      if (!relative.startsWith("./")) relative = "./" + relative;
 
-    if (!relative.startsWith("./")) relative = "./" + relative;
-
-    console.warn(
-      colors
-        .bold()
-        .yellow(
-          `Your ${tsconfig.kind} should extend the configuration generated by SvelteKit:`
+      yield* _(
+        Effect.logWarning(
+          colors
+            .bold()
+            .yellow(
+              `Your ${tsconfig.kind} should extend the configuration generated by Lean Web Kit:`
+            )
         )
-    );
+      );
 
-    console.warn(`{\n  "extends": "${relative}"\n}`);
-  }
+      yield* _(Console.log(`{\n  "extends": "${relative}"\n}`));
+    }
+  });
 }
 
 // <something><optional /*>
@@ -223,7 +249,7 @@ function get_tsconfig_paths(
   include_base_url: boolean
 ) {
   const config_relative = (file: string) =>
-    posixify(path.relative(config.outDir, file));
+    posixify(Path.relative(config.outDir, file));
 
   const alias: Record<string, string> = {};
 

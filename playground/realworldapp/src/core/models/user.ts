@@ -1,4 +1,4 @@
-import { pipe } from "@effect/data/Function";
+import { pipe } from "effect/Function";
 import * as S from "@effect/schema/Schema";
 
 export const User = S.struct({
@@ -9,4 +9,4 @@ export const User = S.struct({
   bio: pipe(S.string, S.nullable),
 });
 
-export type User = S.To<typeof User>;
+export type User = S.Schema.To<typeof User>;

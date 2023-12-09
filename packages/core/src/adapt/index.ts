@@ -1,7 +1,7 @@
 import colors from "kleur";
 import { create_builder } from "./builder.js";
 import { BuildData, Logger } from "../types/internal.js";
-import { ValidatedConfig } from "../config/schema.js";
+import { ValidatedConfig } from "../Config/schema.js";
 
 export async function adapt(
   config: ValidatedConfig,

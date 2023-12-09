@@ -1,4 +1,5 @@
-import { Config, ValidatedConfig } from "../config/schema.js";
+import { Config } from "../Config/schema.js";
+import { Asset } from "../Core.js";
 
 export interface SSRComponent {
   render(props: Record<string, any>): {
@@ -8,36 +9,11 @@ export interface SSRComponent {
   };
 }
 
-export interface Asset {
-  file: string;
-  size: number;
-  type: string | null;
-}
-
-export interface View {
-  file: string;
-  name: string;
-}
-
 export interface BuildData {
   app_dir: string;
   assets: Asset[];
   app_path: string;
   service_worker: string | null;
-}
-
-export interface SSROptions {
-  service_worker: boolean;
-  env_private_prefix: string;
-  files: ValidatedConfig["files"];
-  templates: {
-    error(values: { message: string; status: number }): string;
-  };
-}
-
-export interface Env {
-  private: Record<string, string>;
-  public: Record<string, string>;
 }
 
 export interface Logger {
