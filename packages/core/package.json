@@ -1,9 +1,12 @@
 {
   "name": "leanweb-kit",
-  "version": "1.4.0",
+  "version": "1.4.1",
   "description": "Tools for building better web sites/applications",
   "type": "module",
   "homepage": "https://github.com/theleanweb/kit",
+  "publishConfig": {
+    "access": "public"
+  },
   "repository": {
     "type": "git",
     "url": "https://github.com/theleanweb/kit",
