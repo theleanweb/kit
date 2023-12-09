@@ -12,7 +12,7 @@
   "scripts": {
     "dev": "tsc --w",
     "build": "tsc",
-    "test": "vitest",
+    "test": "vitest run",
     "release": "release-it",
     "prepublish": "rimraf dist && pnpm build"
   },

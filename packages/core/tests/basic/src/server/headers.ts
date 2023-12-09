@@ -14,7 +14,7 @@ router.get("/set-cookie/:type", (_) => {
   headers.append("set-cookie", "cookie2=value2;");
 
   return type == "view"
-    ? view(_, "empty", { headers })
+    ? view(_, "empty", {}, { headers })
     : _.text("set-cookie", { headers });
 });
 
@@ -25,7 +25,7 @@ router.get("/custom/:type", (_) => {
   headers.append("custom-header", "my-value");
 
   return type == "view"
-    ? view(_, "empty", { headers })
+    ? view(_, "empty.html", {}, { headers })
     : _.text("custom header", { headers });
 });
 
