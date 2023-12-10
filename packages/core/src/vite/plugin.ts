@@ -133,10 +133,7 @@ export async function leanweb(user_config?: Config) {
   const runSync = Runtime.runSync(runtime);
   const runPromise = Runtime.runPromise(runtime);
 
-  const core = await Core.Entry.pipe(
-    Logger.withMinimumLogLevel(LogLevel.None),
-    runPromise
-  );
+  const core = await runPromise(Core.Entry);
 
   const root_output_directory = config.outDir;
   const output_directory = `${root_output_directory}/output`;
