@@ -167,7 +167,7 @@ export async function plugin_dev_server(
   };
 
   function update() {
-    pipe(
+    return pipe(
       Effect.all([
         Generated.writeEnv(config.outDir, config.env, vite_config.mode),
         Generated.writeConfig(config, generated),
@@ -195,13 +195,13 @@ export async function plugin_dev_server(
         vite_server.ws.send({ type: "error", err: { message, stack: "" } });
         return Effect.logError(color.bold().red(message));
       }),
-      runFork
+      runPromise
     );
   }
 
   mkdirp(generated);
 
-  runFork(
+  await runPromise(
     Effect.all([
       Generated.writeTSConfig(config.outDir, config, cwd),
       Generated.writeInternal(generated),
@@ -241,10 +241,10 @@ export async function plugin_dev_server(
         },
       };
     },
-    configureServer(server) {
+    async configureServer(server) {
       vite_server = server;
 
-      update();
+      await update();
 
       // Debounce add/unlink events because in case of folder deletion or moves
       // they fire in rapid succession, causing needless invocations.
