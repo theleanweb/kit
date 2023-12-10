@@ -166,8 +166,6 @@ export async function leanweb(user_config?: Config) {
       vite_env = config_env;
       user_vite_config = vite_config;
 
-      // env = CoreEnv.get_env(config.env, config_env.mode);
-
       let input: InputOption;
       const is_build = config_env.command === "build";
 
@@ -235,13 +233,6 @@ export async function leanweb(user_config?: Config) {
         ssr ? "server" : "client"
       }`;
 
-      // const allow = new Set([
-      //   config.outDir,
-      //   path.resolve("src"),
-      //   path.resolve("node_modules"),
-      //   path.resolve(vite.searchForWorkspaceRoot(cwd), "node_modules"),
-      // ]);
-
       return {
         root: cwd,
         appType: "custom",
@@ -254,18 +245,6 @@ export async function leanweb(user_config?: Config) {
           __LEANWEB_DEV__: !is_build ? "true" : "false",
           __LEANWEB_ADAPTER_NAME__: s(config.adapter?.name),
         },
-        // server: {
-        //   sourcemapIgnoreList,
-        //   fs: {
-        //     allow: [...allow],
-        //   },
-        //   watch: {
-        //     ignored: [
-        //       // Ignore all siblings of config.outDir/generated
-        //       `${posixify(config.outDir)}/!(generated)`,
-        //     ],
-        //   },
-        // },
         resolve: {
           alias: [{ find: "__GENERATED__", replacement: generated }],
         },
