@@ -191,7 +191,9 @@ export async function leanweb(user_config?: Config) {
           Effect.tap((entry) =>
             Option.isSome(entry)
               ? Effect.log(
-                  `Server entry resolved: ${colors.green(entry.value)}`
+                  `Server entry resolved: ${colors.green(
+                    entry.value.replace(cwd, "")
+                  )}`
                 )
               : Effect.unit
           ),
