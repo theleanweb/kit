@@ -16,7 +16,9 @@ import * as Logger from "effect/Logger";
 import * as Option from "effect/Option";
 import * as List from "effect/ReadonlyArray";
 import * as Runtime from "effect/Runtime";
+import * as LogLevel from "effect/LogLevel";
 
+import { PrettyLogger } from "effect-log";
 import * as NodeFileSystem from "@effect/platform-node/FileSystem";
 
 import * as fs from "node:fs";
@@ -41,7 +43,6 @@ import { prepareError, template } from "./error.js";
 import * as Core from "../../Core.js";
 import { FileSystemLive } from "../../FileSystem.js";
 import * as Generated from "../../Generated/index.js";
-import { PrettyLogger } from "./logger.js";
 
 const script_file_regex = /\.(js|ts)$/;
 
@@ -63,7 +64,10 @@ export async function plugin_dev_server(
   let vite_config: ResolvedConfig;
 
   const layer = Layer.mergeAll(
-    Logger.replace(Logger.defaultLogger, PrettyLogger),
+    Logger.replace(
+      Logger.defaultLogger,
+      PrettyLogger.make({ showFiberId: false })
+    ),
     Layer.succeed(Core.Config, config),
     NodeFileSystem.layer,
     CoreFileSystem
@@ -383,6 +387,10 @@ export async function plugin_dev_server(
               return yield* _(Effect.logError(Cause.pretty(request.cause)));
             }
 
+            yield* _(
+              Effect.logInfo(`Incoming request ${req.method} ${req.url}`)
+            );
+
             const server_ = yield* _(loadServer());
 
             if (Option.isNone(server_)) {
@@ -433,13 +441,16 @@ export async function plugin_dev_server(
               if (Cause.isCause(e)) {
                 const err = Cause.pretty(e);
                 res.end(err);
-                return Effect.logError(err);
+                // return Effect.logError(err);
               } else {
                 const error = coalesce_to_error(e);
                 res.end(fix_stack_trace(error.stack!));
-                return Effect.unit;
               }
+
+              return Effect.unit;
             }),
+            Effect.withSpan("time"),
+            Logger.withMinimumLogLevel(LogLevel.All),
             runFork
           );
         });

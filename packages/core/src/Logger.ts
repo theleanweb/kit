@@ -11,7 +11,7 @@ const logLevelColors = {
   [LogLevel.Warning._tag]: colors.yellow,
 };
 
-const SimpleLogger = Logger.make(({ logLevel, message, date, annotations }) => {
+const SimpleLogger = Logger.make(({ logLevel, message, date }) => {
   const color = logLevelColors[logLevel._tag];
   console.log(
     `${colors.gray(`[${date.toISOString()}]`)} ${color(
