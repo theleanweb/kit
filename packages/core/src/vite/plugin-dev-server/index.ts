@@ -175,7 +175,7 @@ export async function plugin_dev_server(
           Effect.flatMap(() => core.views),
           Effect.tap((views) => Generated.writeViews(generated, views)),
           Effect.tap((files) =>
-            Effect.logInfo(`Found ${files.length} view files:\n`)
+            Effect.logInfo(`Found ${files.length} view files:`)
           ),
           Effect.tap((files) =>
             files.length > 0
@@ -402,6 +402,12 @@ export async function plugin_dev_server(
             const app_server = server_.value;
 
             app_server.onError((err) => {
+              pipe(
+                Effect.logError(err.message),
+                Effect.tap((_) => Console.log(err.stack)),
+                runFork
+              );
+
               const error = template(prepareError(err));
               const headers = { "Content-Type": "text/html" };
               return new Response(error, { status: 500, headers });
