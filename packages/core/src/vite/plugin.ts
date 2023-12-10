@@ -53,6 +53,8 @@ import * as Core from "../Core.js";
 import { module_guard } from "./graph_analysis/index.js";
 import { inspect } from "node:util";
 
+import { plugin_env } from "./plugin-env/index.js";
+
 function create_service_worker_module(
   config: ValidatedConfig,
   assets: Array<Core.Asset>
@@ -107,8 +109,6 @@ export async function leanweb(user_config?: Config) {
   let vite_server: ViteDevServer;
   let vite_config: ResolvedConfig;
   let user_vite_config: UserConfig;
-
-  let env: CoreEnv.Env;
 
   let finalize: () => Promise<void>;
 
@@ -169,7 +169,7 @@ export async function leanweb(user_config?: Config) {
       vite_env = config_env;
       user_vite_config = vite_config;
 
-      env = CoreEnv.get_env(config.env, config_env.mode);
+      // env = CoreEnv.get_env(config.env, config_env.mode);
 
       let input: InputOption;
       const is_build = config_env.command === "build";
@@ -273,12 +273,7 @@ export async function leanweb(user_config?: Config) {
           alias: [{ find: "__GENERATED__", replacement: generated }],
         },
         optimizeDeps: {
-          exclude: [
-            "leanweb-kit",
-            // exclude kit features so that libraries using them work even when they are prebundled
-            // this does not affect app code, just handling of imported libraries that use $env
-            "$env",
-          ],
+          exclude: ["leanweb-kit"],
         },
         worker: {
           rollupOptions: {
@@ -456,24 +451,12 @@ export async function leanweb(user_config?: Config) {
   const virtual_modules: Plugin = {
     name: "leabweb:plugin-virtual-modules",
     async resolveId(id) {
-      // treat $env/static/[public|private] as virtual
-      if (id.startsWith("$env/") || id === "$service-worker") {
+      if (id === "$service-worker") {
         return `\0${id}`;
       }
     },
-    async load(id, options) {
+    async load(id) {
       switch (id) {
-        case "\0$env/static/private":
-          // console.log("private: ", id, options);
-          return CoreEnv.create_static_module(
-            "$env/static/private",
-            env.private
-          );
-
-        case "\0$env/static/public":
-          // console.log("public: ", options);
-          return CoreEnv.create_static_module("$env/static/public", env.public);
-
         case "\0$service-worker":
           return pipe(
             assets ? Effect.succeed(assets) : core.assets,
@@ -724,6 +707,7 @@ export async function leanweb(user_config?: Config) {
     strip_svelte,
     restore_script,
     virtual_modules,
+    ...plugin_env(config),
     // // @ts-expect-error
     // legacy({ targets: ["defaults", "not IE 11"] }),
   ];
