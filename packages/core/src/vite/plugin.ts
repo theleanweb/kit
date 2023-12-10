@@ -162,7 +162,6 @@ export async function leanweb(user_config?: Config) {
     },
     configureServer(server) {
       vite_server = server;
-      // return dev(server, vite_config, config);
     },
     configurePreviewServer(vite) {
       return preview(vite, vite_config, config);
