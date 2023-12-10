@@ -25,12 +25,11 @@ import * as fs from "node:fs";
 import * as path from "node:path";
 
 import colors from "kleur";
-import mime from "mime";
 import { dedent } from "ts-dedent";
 
 import { Config, ValidatedConfig } from "../Config/schema.js";
 import { BuildData } from "../types/internal.js";
-import { mkdirp, posixify, rimraf } from "../utils/filesystem.js";
+import { mkdirp, rimraf } from "../utils/filesystem.js";
 import { build_service_worker } from "./build/service_worker.js";
 import { assets_base, logger } from "./utils/index.js";
 
@@ -41,21 +40,18 @@ import * as Template from "../compiler/template/index.js";
 
 import { VITE_HTML_PLACEHOLDER } from "../utils/constants.js";
 
-import { dev } from "./dev/index.js";
 import { preview } from "./preview/index.js";
 
-import * as CoreEnv from "../Env/env.js";
+import * as CoreConfig from "../Config/config.js";
+import * as Core from "../Core.js";
 import { FileSystemLive } from "../FileSystem.js";
 import * as Generated from "../Generated/index.js";
 import { Logger as SimpleLogger } from "../Logger.js";
-import * as CoreConfig from "../Config/config.js";
-import * as Core from "../Core.js";
 import { module_guard } from "./graph_analysis/index.js";
-import { inspect } from "node:util";
 
 // plugins
-import { plugin_env } from "./plugin-env/index.js";
 import { plugin_dev_server } from "./plugin-dev-server/index.js";
+import { plugin_env } from "./plugin-env/index.js";
 
 function create_service_worker_module(
   config: ValidatedConfig,
