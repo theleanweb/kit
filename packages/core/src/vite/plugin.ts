@@ -25,12 +25,11 @@ import * as fs from "node:fs";
 import * as path from "node:path";
 
 import colors from "kleur";
-import mime from "mime";
 import { dedent } from "ts-dedent";
 
 import { Config, ValidatedConfig } from "../Config/schema.js";
 import { BuildData } from "../types/internal.js";
-import { mkdirp, posixify, rimraf } from "../utils/filesystem.js";
+import { mkdirp, rimraf } from "../utils/filesystem.js";
 import { build_service_worker } from "./build/service_worker.js";
 import { assets_base, logger } from "./utils/index.js";
 
@@ -41,18 +40,17 @@ import * as Template from "../compiler/template/index.js";
 
 import { VITE_HTML_PLACEHOLDER } from "../utils/constants.js";
 
-import { dev } from "./dev/index.js";
 import { preview } from "./preview/index.js";
 
-import * as CoreEnv from "../Env/env.js";
+import * as CoreConfig from "../Config/config.js";
+import * as Core from "../Core.js";
 import { FileSystemLive } from "../FileSystem.js";
 import * as Generated from "../Generated/index.js";
 import { Logger as SimpleLogger } from "../Logger.js";
-import * as CoreConfig from "../Config/config.js";
-import * as Core from "../Core.js";
 import { module_guard } from "./graph_analysis/index.js";
-import { inspect } from "node:util";
 
+// plugins
+import { plugin_dev_server } from "./plugin-dev-server/index.js";
 import { plugin_env } from "./plugin-env/index.js";
 
 function create_service_worker_module(
@@ -160,7 +158,6 @@ export async function leanweb(user_config?: Config) {
     },
     configureServer(server) {
       vite_server = server;
-      return dev(server, vite_config, config);
     },
     configurePreviewServer(vite) {
       return preview(vite, vite_config, config);
@@ -238,12 +235,12 @@ export async function leanweb(user_config?: Config) {
         ssr ? "server" : "client"
       }`;
 
-      const allow = new Set([
-        config.outDir,
-        path.resolve("src"),
-        path.resolve("node_modules"),
-        path.resolve(vite.searchForWorkspaceRoot(cwd), "node_modules"),
-      ]);
+      // const allow = new Set([
+      //   config.outDir,
+      //   path.resolve("src"),
+      //   path.resolve("node_modules"),
+      //   path.resolve(vite.searchForWorkspaceRoot(cwd), "node_modules"),
+      // ]);
 
       return {
         root: cwd,
@@ -257,18 +254,18 @@ export async function leanweb(user_config?: Config) {
           __LEANWEB_DEV__: !is_build ? "true" : "false",
           __LEANWEB_ADAPTER_NAME__: s(config.adapter?.name),
         },
-        server: {
-          sourcemapIgnoreList,
-          fs: {
-            allow: [...allow],
-          },
-          watch: {
-            ignored: [
-              // Ignore all siblings of config.outDir/generated
-              `${posixify(config.outDir)}/!(generated)`,
-            ],
-          },
-        },
+        // server: {
+        //   sourcemapIgnoreList,
+        //   fs: {
+        //     allow: [...allow],
+        //   },
+        //   watch: {
+        //     ignored: [
+        //       // Ignore all siblings of config.outDir/generated
+        //       `${posixify(config.outDir)}/!(generated)`,
+        //     ],
+        //   },
+        // },
         resolve: {
           alias: [{ find: "__GENERATED__", replacement: generated }],
         },
@@ -699,6 +696,8 @@ export async function leanweb(user_config?: Config) {
     },
   };
 
+  const dev_server = await plugin_dev_server(config, { cwd });
+
   return [
     setup,
     serve,
@@ -708,6 +707,7 @@ export async function leanweb(user_config?: Config) {
     restore_script,
     virtual_modules,
     ...plugin_env(config),
+    ...dev_server,
     // // @ts-expect-error
     // legacy({ targets: ["defaults", "not IE 11"] }),
   ];
