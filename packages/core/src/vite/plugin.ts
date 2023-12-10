@@ -19,6 +19,7 @@ import * as Option from "effect/Option";
 import * as List from "effect/ReadonlyArray";
 import * as Runtime from "effect/Runtime";
 
+import { PrettyLogger } from "effect-log";
 import * as NodeFileSystem from "@effect/platform-node/FileSystem";
 
 import * as fs from "node:fs";
@@ -121,7 +122,10 @@ export async function leanweb(user_config?: Config) {
   const config = config_.right;
 
   const layer = Layer.mergeAll(
-    Logger.replace(Logger.defaultLogger, SimpleLogger),
+    Logger.replace(
+      Logger.defaultLogger,
+      PrettyLogger.make({ showFiberId: false })
+    ),
     Layer.succeed(Core.Config, config),
     NodeFileSystem.layer,
     CoreFileSystem
