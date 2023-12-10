@@ -53,7 +53,9 @@ import * as Core from "../Core.js";
 import { module_guard } from "./graph_analysis/index.js";
 import { inspect } from "node:util";
 
+// plugins
 import { plugin_env } from "./plugin-env/index.js";
+import { plugin_dev_server } from "./plugin-dev-server/index.js";
 
 function create_service_worker_module(
   config: ValidatedConfig,
@@ -160,7 +162,7 @@ export async function leanweb(user_config?: Config) {
     },
     configureServer(server) {
       vite_server = server;
-      return dev(server, vite_config, config);
+      // return dev(server, vite_config, config);
     },
     configurePreviewServer(vite) {
       return preview(vite, vite_config, config);
@@ -238,12 +240,12 @@ export async function leanweb(user_config?: Config) {
         ssr ? "server" : "client"
       }`;
 
-      const allow = new Set([
-        config.outDir,
-        path.resolve("src"),
-        path.resolve("node_modules"),
-        path.resolve(vite.searchForWorkspaceRoot(cwd), "node_modules"),
-      ]);
+      // const allow = new Set([
+      //   config.outDir,
+      //   path.resolve("src"),
+      //   path.resolve("node_modules"),
+      //   path.resolve(vite.searchForWorkspaceRoot(cwd), "node_modules"),
+      // ]);
 
       return {
         root: cwd,
@@ -257,18 +259,18 @@ export async function leanweb(user_config?: Config) {
           __LEANWEB_DEV__: !is_build ? "true" : "false",
           __LEANWEB_ADAPTER_NAME__: s(config.adapter?.name),
         },
-        server: {
-          sourcemapIgnoreList,
-          fs: {
-            allow: [...allow],
-          },
-          watch: {
-            ignored: [
-              // Ignore all siblings of config.outDir/generated
-              `${posixify(config.outDir)}/!(generated)`,
-            ],
-          },
-        },
+        // server: {
+        //   sourcemapIgnoreList,
+        //   fs: {
+        //     allow: [...allow],
+        //   },
+        //   watch: {
+        //     ignored: [
+        //       // Ignore all siblings of config.outDir/generated
+        //       `${posixify(config.outDir)}/!(generated)`,
+        //     ],
+        //   },
+        // },
         resolve: {
           alias: [{ find: "__GENERATED__", replacement: generated }],
         },
@@ -699,6 +701,8 @@ export async function leanweb(user_config?: Config) {
     },
   };
 
+  const dev_server = await plugin_dev_server(config, { cwd });
+
   return [
     setup,
     serve,
@@ -708,6 +712,7 @@ export async function leanweb(user_config?: Config) {
     restore_script,
     virtual_modules,
     ...plugin_env(config),
+    ...dev_server,
     // // @ts-expect-error
     // legacy({ targets: ["defaults", "not IE 11"] }),
   ];
