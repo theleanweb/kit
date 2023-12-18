@@ -161,3 +161,5 @@ app.get('/', (context) => view(context, 'home/index'))
 
 app.get('/', (context) => view(context, 'home/index.html'))
 ```
+
+> leaf nodes i.e components that make up an entire page will be wrapped with a `<html>` tag if rendered with `view` to enable injecting their scoped css, if any.
